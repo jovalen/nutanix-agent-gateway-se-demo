@@ -1,0 +1,37 @@
+services:
+  demo:
+    build: .
+    container_name: nag-se-demo
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      DEMO_MODE: ${DEMO_MODE:-live}
+      NAI_UNIFIED_ENDPOINT_URL: ${NAI_UNIFIED_ENDPOINT_URL:-}
+      NAI_API_KEY: ${NAI_API_KEY:-}
+      NAI_MODEL_OPENAI: ${NAI_MODEL_OPENAI:-openai-demo}
+      NAI_MODEL_ANTHROPIC: ${NAI_MODEL_ANTHROPIC:-claude-demo}
+      NAI_MODEL_PRIVATE: ${NAI_MODEL_PRIVATE:-private-demo}
+      MCP_URL: ${MCP_URL:-https://<nai-host>/enterpriseai/gateway/mcp/<connector>}
+      MCP_API_KEY: ${MCP_API_KEY:-}
+      MCP_POLICY_TOOL: ${MCP_POLICY_TOOL:-get_customer_policy}
+      MCP_CLAIM_TOOL: ${MCP_CLAIM_TOOL:-get_claim_status}
+      MCP_REPAIR_TOOL: ${MCP_REPAIR_TOOL:-find_repair_shops}
+      MCP_CREATE_CLAIM_TOOL: ${MCP_CREATE_CLAIM_TOOL:-create_claim}
+      MCP_BLOCKED_TOOL: ${MCP_BLOCKED_TOOL:-approve_claim_payout}
+      MOCK_LLM: ${MOCK_LLM:-false}
+
+  # Rehearsal only. In the live demo, MCP is deployed inside NAI 2.7.
+  mcp-mock:
+    profiles: ["rehearsal"]
+    build:
+      context: .
+      dockerfile: mock_mcp/Dockerfile
+    container_name: nag-se-demo-mcp
+    command: uvicorn mock_mcp.server:app --host 0.0.0.0 --port 8001
+    ports:
+      - "${MCP_MOCK_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

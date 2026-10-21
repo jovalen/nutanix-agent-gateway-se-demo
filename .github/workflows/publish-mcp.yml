@@ -1,0 +1,35 @@
+name: Publish SeguroAuto MCP image
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "mcp-*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish MCP image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: mock_mcp/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/seguroauto-mcp:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/seguroauto-mcp:latest
