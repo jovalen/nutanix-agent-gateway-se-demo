@@ -14,7 +14,7 @@ mcp = MCPClient(settings)
 
 
 class AssistantRequest(BaseModel):
-    model_key: str = Field(default="private", pattern="^(openai|anthropic|private)$")
+    model_key: str = Field(default="unified_endpoint", pattern="^unified_endpoint$")
     message: str = Field(min_length=1, max_length=8000)
     view: str = Field(default="customer")
 
@@ -36,13 +36,13 @@ async def static_files(path: str):
 
 @app.get("/api/config")
 async def config():
-    return {"product": "SeguroAuto", "mode": settings.demo_mode, "gateway_configured": bool(settings.nai_url and settings.nai_key), "mcp_configured": bool(settings.mcp_url), "mcp_url": settings.mcp_url, "models": settings.models, "tools": settings.tools}
+    return {"product": "SeguroAuto", "mode": settings.demo_mode, "gateway_configured": bool(settings.nai_url and settings.nai_key and settings.nai_endpoint_name), "mcp_configured": bool(settings.mcp_url), "mcp_url": settings.mcp_url, "endpoint_name": settings.nai_endpoint_name, "models": settings.models, "tools": settings.tools}
 
 
 @app.get("/api/health")
 async def health():
     result = {"app": "ok", "gateway": "not-configured", "mcp": "not-tested"}
-    if settings.nai_url and settings.nai_key and not settings.mock_llm:
+    if settings.nai_url and settings.nai_key and settings.nai_endpoint_name and not settings.mock_llm:
         result["gateway"] = "configured"
     elif settings.mock_llm:
         result["gateway"] = "mock"
@@ -93,7 +93,7 @@ def tool_text(result: dict[str, Any]) -> str:
 
 @app.post("/api/assistant")
 async def assistant(request: AssistantRequest):
-    model = settings.models[request.model_key]
+    model = settings.nai_endpoint_name or "rehearsal-unified-endpoint"
     selected_tool, arguments = choose_tool(request.message)
     tool_result: dict[str, Any] | None = None
     blocked = False
@@ -109,14 +109,14 @@ async def assistant(request: AssistantRequest):
                   "No inventes coberturas ni importes. Si una operación requiere aprobación humana, dilo claramente. "
                   f"Vista actual: {request.view}. Contexto de sistema obtenido mediante MCP:\n{context}")
         result = await llm.chat(model, [{"role": "system", "content": system}, {"role": "user", "content": request.message}])
-        return {**result, "model_key": request.model_key, "tool": selected_tool, "tool_result": tool_result, "blocked": blocked, "view": request.view, "usage": result.get("usage", {})}
+        return {**result, "model_key": request.model_key, "endpoint_name": result.get("endpoint_name", model), "tool": selected_tool, "tool_result": tool_result, "blocked": blocked, "view": request.view, "usage": result.get("usage", {})}
     except (MCPError, GatewayError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/guided-run")
 async def guided_run(request: AssistantRequest):
-    model = settings.models[request.model_key]
+    model = settings.nai_endpoint_name or "rehearsal-unified-endpoint"
     steps: list[dict[str, Any]] = []
     try:
         available = await mcp.list_tools()

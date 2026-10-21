@@ -20,10 +20,15 @@ class UnifiedEndpointClient:
         self.cfg = cfg
 
     async def chat(self, model: str, messages: list[dict[str, Any]], temperature: float = 0.2) -> dict[str, Any]:
-        if self.cfg.mock_llm or not self.cfg.nai_url or not self.cfg.nai_key:
+        if self.cfg.mock_llm or not self.cfg.nai_url or not self.cfg.nai_key or not self.cfg.nai_endpoint_name:
             return self._mock_chat(model, messages)
 
-        url = self.cfg.nai_url.rstrip("/") + "/chat/completions"
+        # Accept either the documented base URL (.../v1) or the full URL
+        # copied from NAI (.../v1/chat/completions).
+        url = self.cfg.nai_url.rstrip("/")
+        if url.endswith("/chat/completions"):
+            url = url[:-len("/chat/completions")]
+        url += "/chat/completions"
         headers = {"Authorization": f"Bearer {self.cfg.nai_key}", "Content-Type": "application/json"}
         payload = {"model": model, "messages": messages, "temperature": temperature}
         try:
@@ -41,6 +46,8 @@ class UnifiedEndpointClient:
             "content": content,
             "raw": data,
             "model": model,
+            "endpoint_name": self.cfg.nai_endpoint_name,
+            "resolved_model": data.get("model", model),
             "transport": "nai-unified-endpoint",
             "usage": normalize_usage(data),
             "usage_source": "unified-endpoint",
