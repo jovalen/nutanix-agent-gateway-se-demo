@@ -8,11 +8,14 @@ services:
       DEMO_MODE: ${DEMO_MODE:-live}
       NAI_UNIFIED_ENDPOINT_URL: ${NAI_UNIFIED_ENDPOINT_URL:-}
       NAI_API_KEY: ${NAI_API_KEY:-}
-      NAI_MODEL_OPENAI: ${NAI_MODEL_OPENAI:-openai-demo}
-      NAI_MODEL_ANTHROPIC: ${NAI_MODEL_ANTHROPIC:-claude-demo}
-      NAI_MODEL_PRIVATE: ${NAI_MODEL_PRIVATE:-private-demo}
+      NAI_UNIFIED_ENDPOINT_NAME: ${NAI_UNIFIED_ENDPOINT_NAME:-}
       MCP_URL: ${MCP_URL:-https://<nai-host>/enterpriseai/gateway/mcp/<connector>}
       MCP_API_KEY: ${MCP_API_KEY:-}
+      MCP_PROTOCOL_VERSION: ${MCP_PROTOCOL_VERSION:-2025-06-18}
+      # Lab-only: applies to Unified Endpoint and MCP. Keep true in production.
+      TLS_VERIFY: ${TLS_VERIFY:-true}
+      # Backwards compatibility with older .env files.
+      MCP_TLS_VERIFY: ${MCP_TLS_VERIFY:-true}
       MCP_POLICY_TOOL: ${MCP_POLICY_TOOL:-get_customer_policy}
       MCP_CLAIM_TOOL: ${MCP_CLAIM_TOOL:-get_claim_status}
       MCP_REPAIR_TOOL: ${MCP_REPAIR_TOOL:-find_repair_shops}
