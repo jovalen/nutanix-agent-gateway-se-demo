@@ -6,7 +6,7 @@ def env(name: str, default: str = "") -> str:
     return os.getenv(name, default).strip()
 
 
-@dataclass(frozen=True)
+@dataclass
 class Settings:
     demo_mode: str = env("DEMO_MODE", "live")
     nai_url: str = env("NAI_UNIFIED_ENDPOINT_URL")
@@ -14,6 +14,11 @@ class Settings:
     nai_key: str = env("NAI_API_KEY")
     mcp_url: str = env("MCP_URL", "http://mcp-mock:8001/mcp")
     mcp_key: str = env("MCP_API_KEY")
+    mcp_protocol_version: str = env("MCP_PROTOCOL_VERSION", "2025-06-18")
+    # Lab-only workaround for an hPOC certificate/hostname mismatch. Keep true in production.
+    # TLS_VERIFY applies to both the Unified Endpoint and MCP. MCP_TLS_VERIFY remains
+    # as a backwards-compatible fallback for older .env files.
+    tls_verify: bool = env("TLS_VERIFY", env("MCP_TLS_VERIFY", "true")).lower() not in {"0", "false", "no", "off"}
     policy_tool: str = env("MCP_POLICY_TOOL", "get_customer_policy")
     claim_tool: str = env("MCP_CLAIM_TOOL", "get_claim_status")
     repair_tool: str = env("MCP_REPAIR_TOOL", "find_repair_shops")
