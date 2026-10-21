@@ -1,28 +1,25 @@
-# SeguroAuto — Nutanix Agent Gateway SE Demo
+# Nutanix Agent Gateway SE Demo
 
-Aplicación web de una aseguradora de auto para demostrar, con una experiencia de negocio real, cómo Nutanix Agent Gateway controla el acceso de una aplicación AI a modelos, tokens, herramientas MCP y operaciones sensibles.
+Aplicación web de una aseguradora de auto para demostrar, con una experiencia de negocio real, cómo Nutanix Agent Gateway controla el acceso de una aplicación IA a modelos, tokens, herramientas MCP y operaciones sensibles.
 
-El usuario final consulta su póliza, revisa un siniestro y busca un taller. El SE puede cambiar a la vista de Operaciones o al SE Control Room para demostrar qué ocurre por detrás cuando la aplicación utiliza un Unified Endpoint y un MCP Connector.
+El usuario final consulta su póliza, revisa un siniestro y busca un taller. El SE puede cambiar a la vista para enseñar qué ocurre por detrás cuando la aplicación utiliza un Unified Endpoint y un MCP Connector.
 
 ## Objetivo de la demo
 
-La demo debe responder a cinco preguntas del cliente:
+La demo responde a cinco preguntas que los clientes desplegando agentes o aplicaciones de IA deben hacerse:
 
 * ¿Cómo damos acceso a OpenAI, Claude y modelos privados sin integrar cada proveedor directamente en cada aplicación?
 * ¿Cómo protegemos el presupuesto de tokens y evitamos que un agente se dispare en consumo?
 * ¿Cómo mantenemos la aplicación operativa si un proveedor está saturado o no disponible?
 * ¿Cómo permitimos que un agente consulte datos y use herramientas sin darle permisos de administrador?
-* ¿Cómo demostramos qué usuario, aplicación, modelo y herramienta generaron cada acción?
+* ¿Cómo puedo saber qué usuario, aplicación, modelo y herramienta generaron cada acción?
 
-El mensaje central es:
 
-> SeguroAuto mantiene una experiencia de cliente sencilla, mientras Nutanix Agent Gateway proporciona el control plane para el tráfico hacia LLMs y herramientas empresariales.
->
 > En el escenario live de esta demo, el MCP no se ejecuta en el portátil: se publica como **Local MCP Server dentro de NAI 2.7** y la aplicación accede a él únicamente mediante el MCP Connector de NAI. Docker Compose conserva el mock local solo para rehearsal y desarrollo sin hPOC.
 
 ## Qué verá el usuario
 
-La pantalla principal representa el portal de cliente de SeguroAuto.
+La pantalla principal representa el portal de cliente de SeguroAuto (compañía ficticia ;-) ).
 
 El usuario puede:
 
@@ -114,7 +111,7 @@ POST {NAI_UNIFIED_ENDPOINT_URL}/chat/completions
 Authorization: Bearer {NAI_API_KEY}
 ```
 
-El nombre del modelo enviado por la aplicación corresponde al alias configurado en NAI. La aplicación únicamente cambia el alias o la virtual key; no cambia el código de integración del agente.
+El nombre del modelo enviado por la aplicación corresponde al alias configurado en NAI. La aplicación únicamente cambia el alias o la key; no cambia el código de integración del agente.
 
 El Unified Endpoint puede centralizar:
 
@@ -184,9 +181,9 @@ No se asume un registry interno concreto para el hPOC. Como el proyecto vive en 
 
 ```bash
 docker build -f mock_mcp/Dockerfile \
-  -t ghcr.io/<ORG_OR_USER>/seguroauto-mcp:mcp-v0.2.0 .
+  -t ghcr.io/jovalen/seguroauto-mcp:mcp-v0.2.0 .
 
-docker push ghcr.io/<ORG_OR_USER>/seguroauto-mcp:mcp-v0.2.0
+docker push ghcr.io/jovalen/seguroauto-mcp:mcp-v0.2.0
 ```
 
 En NAI 2.7: 
@@ -220,7 +217,7 @@ seguroauto-dev
 seguroauto-prod
 ```
 
-Cada uno debe incluir los aliases que se quieran demostrar:
+Cada uno debe incluir los alias que se quieran demostrar:
 
 ```text
 openai-seguroauto
@@ -247,7 +244,7 @@ seguroauto-dev-agent
 seguroauto-prod-agent
 ```
 
-La aplicación solo conoce la virtual key. No conoce las credenciales maestras de OpenAI, Claude ni del modelo privado.
+La aplicación solo conoce la "NAI" key. No conoce las credenciales de OpenAI, Claude ni del modelo privado.
 
 ### 4. Configurar rate limiting
 
@@ -307,7 +304,7 @@ En NAI 2.7:
 5. Configurar el puerto MCP `8001` y el protocolo MCP requerido por el hPOC.
 6. Desplegar y esperar a que el servidor quede `Ready`.
 7. Crear un **MCP Connector** para SeguroAuto apuntando al servidor local.
-8. Crear una virtual key específica para ese Connector.
+8. Crear una key específica para ese Connector.
 
 El servidor publica estas herramientas:
 
@@ -325,7 +322,7 @@ En el Connector, aplicar tool filtering y publicar únicamente las herramientas 
 
 Durante la demo se debe mostrar:
 
-* Qué virtual key hizo la llamada.
+* Qué key hizo la llamada.
 * Qué modelo respondió.
 * Cuántos tokens utilizó.
 * Qué herramienta MCP se invocó.
@@ -334,7 +331,7 @@ Durante la demo se debe mostrar:
 
 ## Guion completo de demo
 
-### Acto 1 — Experiencia de cliente
+### 1 — Experiencia de cliente
 
 Duración aproximada: 3 minutos.
 
@@ -354,7 +351,9 @@ Duración aproximada: 3 minutos.
 
 5. Señalar que el usuario ve una respuesta sencilla; no ve providers, claves ni infraestructura.
 
-### Acto 2 — MCP y operaciones de negocio
+6. Dependiendo de qué modelo hayamos elegido en el Unified Endpoint cada petición podría ir a un endpoint diferente (si configuramos pesos).
+
+### 2 — MCP y operaciones de negocio
 
 Duración aproximada: 3 minutos.
 
@@ -368,7 +367,7 @@ Mensaje sugerido:
 
 > La aplicación no tiene que integrar una API distinta para cada sistema de negocio. El agente recibe herramientas gobernadas y el Gateway controla cuáles puede utilizar.
 
-### Acto 3 — Operación no permitida
+### 3 — Operación no permitida
 
 Duración aproximada: 2 minutos.
 
@@ -387,7 +386,7 @@ Mensaje sugerido:
 
 > El modelo puede interpretar la intención, pero la autorización la decide la política del Gateway, no el modelo.
 
-### Acto 4 — Unified Endpoint
+### 4 — Unified Endpoint
 
 Duración aproximada: 3 minutos.
 
@@ -417,16 +416,16 @@ Duración aproximada: 3 minutos.
 8. Cambiar a la configuración PROD.
 9. Repetir y comparar el comportamiento.
 
-El objetivo no es que el usuario memorice un número. El objetivo es demostrar que el consumo se puede controlar antes de convertirse en una sorpresa de coste.
+El objetivo es demostrar que el consumo se puede controlar antes de convertirse en una sorpresa de coste.
 
-### Acto 6 — Fallback
+### 6 — Fallback
 
 Duración aproximada: 2 minutos.
 
 1. Configurar OpenAI como ruta primaria.
 2. Configurar Claude como fallback.
 3. Configurar el modelo privado como fallback final.
-4. Simular una respuesta `429` o `503` del provider primario.
+4. Simular una respuesta `429` o `503` del provider primario
 5. Repetir la consulta.
 6. Mostrar que la aplicación continúa funcionando y que la ruta cambia en NAI.
 
@@ -622,7 +621,7 @@ MCP_URL=https://<nai-host>/enterpriseai/gateway/mcp/<connector>
 MCP_API_KEY=<virtual-mcp-key>
 ```
 
-La misma aplicación y el mismo código deben funcionar en ambos casos. Lo que cambia es el punto de entrada MCP y las políticas aplicadas por NAI, no la lógica de negocio de SeguroAuto.
+La misma aplicación y el mismo código funcionan en ambos casos. Lo que cambia es el punto de entrada MCP y las políticas aplicadas por NAI, no la lógica de negocio de SeguroAuto.
 
 ## Troubleshooting
 
@@ -692,8 +691,7 @@ El flujo probado localmente incluye:
 * Respuesta de uso de tokens.
 * Monitor visual de tokens.
 
-## Fuentes internas de posicionamiento
-
+## Docs a consultar
 * [NAI AI Gateway — Unified Endpoints](https://docs.google.com/document/d/1o1HQC2rEka2uVbSzmsWtT__kL77m2iRkI27RFMYriHU)
 * [Nutanix Enterprise AI — SE Field Demo Guide](https://docs.google.com/document/d/1iOFNW9OZK8-9yztoxK6yujg8tvmsOr76dw38x9Lz11I)
 * [Nutanix AI Gateway — presentación interna](https://nutanixinc.sharepoint.com/sites/NFLCore/_layouts/15/Doc.aspx?sourcedoc=%7B6C921C1F-D155-4845-B7D8-C4403592D4D3%7D&file=Nutanix_AI%2BGateway.pptx&action=edit&mobileredirect=true&web=1)
