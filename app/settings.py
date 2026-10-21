@@ -10,10 +10,8 @@ def env(name: str, default: str = "") -> str:
 class Settings:
     demo_mode: str = env("DEMO_MODE", "live")
     nai_url: str = env("NAI_UNIFIED_ENDPOINT_URL")
+    nai_endpoint_name: str = env("NAI_UNIFIED_ENDPOINT_NAME")
     nai_key: str = env("NAI_API_KEY")
-    model_openai: str = env("NAI_MODEL_OPENAI", "openai-demo")
-    model_anthropic: str = env("NAI_MODEL_ANTHROPIC", "claude-demo")
-    model_private: str = env("NAI_MODEL_PRIVATE", "private-demo")
     mcp_url: str = env("MCP_URL", "http://mcp-mock:8001/mcp")
     mcp_key: str = env("MCP_API_KEY")
     policy_tool: str = env("MCP_POLICY_TOOL", "get_customer_policy")
@@ -25,7 +23,9 @@ class Settings:
 
     @property
     def models(self) -> dict[str, str]:
-        return {"openai": self.model_openai, "anthropic": self.model_anthropic, "private": self.model_private}
+        # Kept as a compatibility shape for the existing UI. NAI chooses the
+        # underlying provider(s) behind this single Unified Endpoint.
+        return {"unified_endpoint": self.nai_endpoint_name or "not-configured"}
 
     @property
     def tools(self) -> dict[str, str]:
