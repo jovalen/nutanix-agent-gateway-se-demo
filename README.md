@@ -503,7 +503,7 @@ The same application and code work in both cases. What changes is the MCP entry 
 
 ## Complete Demo Walkthrough
 
-### 1 — Customer Experience
+### 1.- Customer Experience
 
 1. Open the SeguroAuto portal.
 2. Show the active policy.
@@ -521,7 +521,7 @@ The same application and code work in both cases. What changes is the MCP entry 
 
 5. Show that the application only knows the NAI endpoint and its associated API key. It always uses an OpenAI-compatible API schema, regardless of which models are part of the Unified Endpoint. Depending on the routing configuration, requests may be sent to different model endpoints, including when weighted routing is enabled.
 
-### 2 — MCP and Business Operations
+### 2.- MCP and Business Operations
 
 1. Select **Find a Repair Shop**.
 2. Show `find_repair_shops` in the audit trail.
@@ -533,7 +533,7 @@ Suggested talking point:
 
 > The application does not need a separate API integration for every business system. The agent is given governed tools, and the Gateway controls which ones it can access.
 
-### 3 — Unauthorized Operation
+### 3.- Unauthorized Operation
 
 1. Ask:
 
@@ -550,7 +550,7 @@ Suggested talking point:
 
 > The model can understand the intent, but the Gateway policy—not the model—determines whether the tool is available. Business-level authorization remains the responsibility of the underlying system.
 
-### 4 — Unified Endpoint
+### 4.- Unified Endpoint
 
 1. Run a query.
 2. Show the model alias and token counter.
@@ -563,9 +563,7 @@ Suggested talking point:
 
 > We changed the provider and the route, but we did not change the agent or the application.
 
-### 5 — Rate Limiting
-
-**Approximate duration — 3 minutes**
+### 5.- Rate Limiting
 
 1. Open the DEV configuration in NAI.
 2. Show the global limit and API-key-level limit.
@@ -579,9 +577,7 @@ Suggested talking point:
 
 The goal is to show that consumption can be controlled before it becomes an unexpected cost.
 
-### 6 — Fallback
-
-**Approximate duration — 2 minutes**
+### 6.- Fallback
 
 1. Configure OpenAI as the primary route.
 2. Configure Claude as the fallback.
