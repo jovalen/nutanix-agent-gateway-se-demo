@@ -2,7 +2,7 @@
 
 ## Overview
 
-SeguroAuto is a fictional insurance web application built to demonstrate, through a realistic business scenario, how **Nutanix Agent Gateway** helps govern AI model access, token consumption, MCP tools, and sensitive business operations.
+SeguroAuto is an insurance web application (not real)  built to demonstrate, through a realistic business scenario, how **Nutanix Agent Gateway** helps govern AI model access, token consumption, MCP tools, and sensitive business operations.
 
 The demo also shows how Agent Gateway simplifies the work of **Forward Deployed Engineering and Development teams** through a **Unified Endpoint** that abstracts access to public and private AI models. These can include models from OpenAI, Mistral, Google Gemini, Anthropic, and Azure, alongside private models deployed on **Nutanix Enterprise AI (NAI)**.
 
@@ -10,7 +10,7 @@ Teams can adjust model routing, access policies, high availability, and fallback
 
 For end users, SeguroAuto supports everyday insurance workflows such as checking a policy, reviewing a claim, and finding a repair shop. For **Systems Engineers**, the app offers technical views that reveal how requests flow through the Unified Endpoint and how MCP Connectors provide governed access to business tools.
 
-> **Demo environment:** SeguroAuto uses fictional data and simulated business operations. It is designed to illustrate enterprise AI architecture and controls, not to process real insurance claims or payouts.
+> **Demo environment:** SeguroAuto uses syntetic data and simulated business operations.
 
 ## Demo Objectives
 
@@ -211,7 +211,7 @@ MCP_URL=http://mcp-mock:8001/mcp
 MCP_API_KEY=
 ```
 
-Start the mock service using its Compose profile:
+Start the mock service using its compose profile:
 
 ```bash
 docker compose --profile rehearsal up --build
@@ -219,13 +219,13 @@ docker compose --profile rehearsal up --build
 
 In this mode:
 
-- The mock MCP server runs locally within Docker Compose.
+- The mock MCP server runs locally within docker compose.
 - Model responses are deterministic.
 - The token monitor shows a local estimate.
 - Real NAI rate limiting is not tested.
 - MCP deployment and governance in NAI are not tested.
 
-This mode is only for demo preparation or development without access to the hPOC environment. The Live demo must use the Local MCP Server deployed inside NAI 2.7.
+This mode is only for demo preparation or development without access to the hPOC environment. The Live demo must use the Local MCP Server deployed inside NAI 2.7 or newer versions.
 
 ### Live Mode
 
@@ -307,7 +307,7 @@ In Live mode, the backend normalizes the `usage` object returned by the Unified 
 }
 ```
 
-In Rehearsal mode, the monitor displays a clearly labeled local estimate. This is useful for practicing the demo without real credentials, but must not be presented as token usage measured by NAI.
+In rehearsal mode, the monitor displays a clearly labeled local estimate. This is useful for practicing the demo without real credentials, but must not be presented as token usage measured by NAI.
 
 ## DEV and PROD Environments
 
@@ -335,7 +335,7 @@ MCP_API_KEY=...
 
 ## NAI Setup
 
-Exact labels may vary depending on the version and hPOC environment, but the conceptual setup sequence is as follows.
+Exact labels may vary depending on the version and Hpoc environment, but the conceptual setup sequence is as follows.
 
 ### 1. Create Providers
 
@@ -427,7 +427,7 @@ git tag mcp-v0.2.0
 git push origin mcp-v0.2.0
 ```
 
-If the GHCR package is private, create an **Image Registry Credential** in NAI for `ghcr.io` using a token with package-read permission. If the hPOC cannot access GHCR, use the approved internal registry with the corresponding image name and tag.
+If the GHCR package is private, create an **Image Registry Credential** in NAI for `ghcr.io` using a token with package-read permission. If the Hpoc cannot access GHCR, use the approved internal registry with the corresponding image name and tag.
 
 #### Create the Local MCP Server in NAI
 
@@ -486,7 +486,7 @@ OpenAI · Claude · Private NAI      Local MCP Server in NAI 2.7
 
 In Live mode, the application does not call `mcp-mock` directly, does not need your laptop's IP address, and does not require Cloudflare Tunnel. The MCP Server runs as a workload managed by NAI, while the Connector provides identity, tool filtering, and auditing.
 
-Docker Compose retains `mcp-mock` for local Rehearsal:
+Docker compose retains `mcp-mock` for local rehearsal:
 
 ```text
 SeguroAuto app → http://mcp-mock:8001/mcp
