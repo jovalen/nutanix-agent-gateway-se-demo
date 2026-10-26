@@ -1,0 +1,17 @@
+# Optional isolated upstream lab.
+# The inference listener may be reachable by NAI only through a private,
+# HTTPS-protected ingress. The admin listener is always bound to the local workstation.
+services:
+  fault-lab:
+    build: ./fault_provider
+    environment:
+      FAULT_ADMIN_TOKEN: ${FAULT_ADMIN_TOKEN:?Set a private admin token in .env}
+      FAULT_INFERENCE_PORT: 8080
+      FAULT_ADMIN_PORT: 8089
+    ports:
+      # Keep local by default. For an approved private ingress, bind the
+      # inference port on the required interface and restrict it by firewall.
+      - "${FAULT_LAB_INFERENCE_BIND:-127.0.0.1}:${FAULT_LAB_INFERENCE_PORT:-8090}:8080"
+      # Never change this to 0.0.0.0: the admin endpoint changes fault state.
+      - "127.0.0.1:${FAULT_ADMIN_PORT:-8089}:8089"
+    restart: unless-stopped
