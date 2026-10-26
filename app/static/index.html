@@ -50,14 +50,21 @@
     .nx-collapsed .nx-monitor-details {display:none;}
     @media(max-width:600px) {#token-monitor.nx-monitor{right:10px;bottom:10px;width:min(340px,calc(100vw - 20px));}}
   </style>
-<style>[data-control-panel][hidden]{display:none!important}.control-tabs{flex-wrap:wrap}.nx-model-option.is-serving{background:#135067}</style></head>
+<style>[data-control-panel][hidden]{display:none!important}.control-tabs{flex-wrap:wrap}.nx-model-option.is-serving{background:#135067}</style><style>
+#control-view .control-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+#control-view .nx-drills {margin-top:16px;padding:15px;background:#f1f7fb;border:1px solid #c9e4ed;border-radius:12px}
+#control-view .nx-drill-buttons {display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+#control-view .nx-small-note {font-size:12px;line-height:1.55;color:#5a7080;margin-top:12px}
+#control-view #drill-result {font-size:13px;white-space:pre-wrap;line-height:1.6}
+#control-view [data-control-panel][hidden] {display:none!important}
+</style><style>.nx-ops-steps{display:grid;gap:8px;margin:14px 0}.nx-step{display:flex;gap:10px;padding:11px 13px;background:#f0f8fc;border:1px solid #d1e7f0;border-radius:9px;font-size:13px}.nx-step strong{color:#087fa6}.ops-result{white-space:pre-line;line-height:1.6;overflow-wrap:anywhere}.queue-row:first-of-type{cursor:default}#drill-result{white-space:pre-line}</style></head>
 <body>
 <header class="nav">
 <div class="brand"><div class="brand-mark">S</div><div><strong>SeguroAuto</strong><small>Keeping you moving, with confidence</small></div></div>
 <nav aria-label="Main navigation">
 <button class="nav-item active" data-view="customer">Customer Portal</button>
 <button class="nav-item" data-view="operations">Operations</button>
-<button class="nav-item" data-view="control">SE Control Room</button>
+<button class="nav-item" data-view="control">Platform Control Room</button>
 </nav>
 <div class="profile"><span class="avatar">DC</span><span>Demo Customer</span><span class="chev">⌄</span></div>
 </header>
@@ -90,56 +97,49 @@
 </aside></div>
 </section>
 <section class="view" id="operations-view">
-<div class="ops-header"><div><p class="crumb">INTERNAL VIEW / OPERATIONS</p><h2>AI-assisted claims management</h2><p>The agent speeds up information retrieval without bypassing business controls.</p></div><button class="primary" id="guided">▶ Analyze Claim with AI</button></div>
-<div class="ops-grid"><div class="card queue"><div class="card-head"><div><p class="label">WORK QUEUE</p><h2>Today's claims</h2></div><span class="badge green">12 processed</span></div><div class="queue-row"><span class="status-dot amber"></span><div><strong>CLM-2026-1043</strong><small>Inspection scheduled · Customer 001</small></div><span class="queue-time">Now</span></div><div class="queue-row"><span class="status-dot green"></span><div><strong>CLM-2026-1041</strong><small>Documents complete · Customer 002</small></div><span class="queue-time">09:12</span></div><div class="queue-row"><span class="status-dot blue"></span><div><strong>CLM-2026-1038</strong><small>Repair shop assigned · Customer 003</small></div><span class="queue-time">08:47</span></div></div>
-<div class="card ops-insight"><p class="label">AI OPERATIONS COPILOT</p><h2 id="ops-result-title">Ready to review a claim</h2><div class="ops-result" id="ops-result">Run the guided workflow to retrieve policy, claim, and repair-shop information through MCP and generate a summary.</div></div></div>
+<div class="ops-header"><div><p class="crumb">OPERATIONS / CLAIMS WORKFLOW</p><h2>AI-assisted claims management</h2><p>The agent speeds up information retrieval without bypassing business controls.</p></div><button class="primary" id="guided">▶ Analyze Claim with AI</button></div>
+<div class="ops-grid"><div class="card queue"><div class="card-head"><div><p class="label">WORK QUEUE</p><h2>Today's claims</h2></div><span class="badge green">Demo queue</span></div><div class="queue-row"><span class="status-dot amber"></span><div><strong>CLM-2026-1043</strong><small>Inspection scheduled · Customer 001</small></div><span class="queue-time">Now</span></div><div class="queue-row" style="opacity:.55;cursor:not-allowed" title="Demo queue item; not connected to an MCP record"><span class="status-dot green"></span><div><strong>CLM-2026-1041</strong><small>Documents complete · Customer 002</small></div><span class="queue-time">09:12</span></div><div class="queue-row" style="opacity:.55;cursor:not-allowed" title="Demo queue item; not connected to an MCP record"><span class="status-dot blue"></span><div><strong>CLM-2026-1038</strong><small>Repair shop assigned · Customer 003</small></div><span class="queue-time">08:47</span></div><p class="nx-small-note">Demo queue. Only CLM-2026-1043 has MCP data in this demo. The guided workflow presents evidence for human review; payout approval remains protected.</p></div>
+<div class="card ops-insight"><p class="label">AI OPERATIONS COPILOT</p><h2 id="ops-result-title">Ready to review a claim</h2><div class="nx-ops-steps" id="ops-steps"></div><div class="ops-result" id="ops-result">Select the demo claim and run a guided, read-only investigation. Tool calls and recommendations will be shown separately.</div></div></div>
 </section>
 <section class="view" id="control-view">
-<div class="ops-header"><div><p class="crumb">SE DEMO / NUTANIX AGENT GATEWAY</p><h2>Control Room</h2><p>The business application remains front and center. This view reveals the governance and routing behind it.</p></div><span class="live-pill" id="live-pill">● GATEWAY LIVE</span></div>
+<div class="ops-header"><div><p class="crumb">PLATFORM DEMO / NUTANIX AGENT GATEWAY</p><h2>Control Room</h2><p>The business application remains front and center. This view reveals the governance and routing behind it.</p></div><span class="live-pill" id="live-pill">● GATEWAY LIVE</span></div>
 <div class="control-tabs"><button class="control-tab active" data-control="infra">Infrastructure</button><button class="control-tab" data-control="devops">AI Platform &amp; DevOps</button><button class="control-tab" data-control="security">Security &amp; Governance</button></div>
-<div class="control-grid"><div class="card health-card"><div class="card-head"><div><p class="label">RUNTIME HEALTH</p><h2 id="control-title">Inference availability</h2></div><span class="badge green">Not measured</span></div><div class="health-bars"><div><span>Unified Endpoint</span><b>Not measured</b><i><em style="width:0%"></em></i></div><div><span>Private NAI model</span><b>Not measured</b><i><em style="width:0%"></em></i></div><div><span>MCP Connector</span><b id="mcp-health">Not measured</b><i><em style="width:0%"></em></i></div></div><div class="control-note" id="control-note">Hybrid routing and fallback help maintain continuity when an inference provider changes or becomes unavailable.</div></div>
-<div class="card signals-card"><p class="label">GOVERNANCE SIGNALS</p><div class="signal"><span>LLM requests observed by this app</span><strong id="metric-llm">0</strong></div><div class="signal"><span>Available MCP tools</span><strong id="metric-tools">—</strong></div><div class="signal danger-signal"><span>Blocked sensitive actions</span><strong id="metric-blocked">0</strong></div><div class="route-box"><small>ACTIVE ROUTE</small><strong id="active-route">No verified route yet</strong><span>Virtual key · scoped to SeguroAuto</span></div></div>
-<div class="card audit-card"><div class="card-head"><div><p class="label">RECENT AUDIT TRAIL</p><h2>Agent activity</h2></div><span class="badge purple">MCP</span></div><div class="audit-log" id="audit-log"><div>No application events recorded yet</div></div></div><div class="card" data-control-panel="infra"><h3>Infrastructure perspective</h3><p>View reported models and endpoint configuration. Serving provider requires verified NAI telemetry.</p></div><div class="card" data-control-panel="devops" hidden=""><h3>Platform and DevOps perspective</h3><p>Token totals and request counters are collected by this application. Gateway-enforced rate limits must be validated in NAI.</p></div><div class="card" data-control-panel="security" hidden=""><h3>Security perspective</h3><p>The application enforces a demo-level payout block. MCP Connector tool allowlists and downstream authorization must be checked separately.</p></div></div>
+<div class="control-grid">
+<div class="card" data-control-panel="infra">
+<p class="label">ROUTING &amp; FALLBACK</p><h2>Unified Endpoint</h2>
+<p>Current configured endpoint <strong id="active-route">Awaiting configuration</strong></p>
+<p class="nx-small-note">Provider and routing details are available when NAI supplies gateway telemetry. The floating widget shows the response metadata.</p>
+<div class="nx-drills"><h3>Live fallback validation</h3><p>Send a real inference request through a dedicated NAI test Unified Endpoint. Place its isolated primary target into an approved fault condition, then repeat the probe.</p><div class="nx-drill-buttons"><button class="outline" data-fallback-probe="baseline" type="button">1 · Capture baseline</button><button class="outline" data-fallback-probe="after" type="button">2 · Probe after upstream fault</button></div><div aria-live="polite" id="drill-result" role="status">Ready when a dedicated test Unified Endpoint is configured.</div><p class="nx-small-note">The probe leaves NAI configuration unchanged. Confirm the primary failure and secondary route in NAI telemetry.</p></div>
+
+</div>
+<div class="card" data-control-panel="devops" hidden="">
+<p class="label">CONSUMPTION &amp; API GOVERNANCE</p><h2>Application requests</h2>
+<div class="signal"><span>LLM calls observed by this browser</span><strong id="metric-llm">0</strong></div>
+<div class="signal"><span>MCP tools exposed to the application</span><strong id="metric-tools">—</strong></div>
+<p class="nx-small-note">Token usage and the last reported model are shown in the floating Gateway monitor. Gateway-side 429 limits require an actual NAI policy test.</p>
+</div>
+<div class="card" data-control-panel="security" hidden="">
+<p class="label">MCP GOVERNANCE</p><h2>Restricted actions</h2>
+<div class="signal danger-signal"><span>Application-side sensitive action denials</span><strong id="metric-blocked">0</strong></div>
+<p>Try <code>Approve the payout for claim CLM-2026-1043 and execute payment now</code> in Customer Portal.</p>
+<p class="nx-small-note">The app protects the sensitive operation before an MCP call. Configure the NAI MCP Connector allowlist to apply the same least-privilege boundary.</p>
+</div>
+<div class="card audit-card"><div class="card-head"><div><p class="label">APPLICATION EVENT LOG</p><h2>Recent demo events</h2></div><span class="badge purple">APP</span></div><div class="audit-log" id="audit-log"><div>No application events recorded yet</div></div><p class="nx-small-note">These are application events. NAI audit records are available in the platform telemetry view.</p></div>
+</div>
 </section>
 </main>
 <aside aria-label="Nutanix Agent Gateway telemetry" class="token-monitor nx-monitor" id="token-monitor">
 <div class="token-top"><div class="token-title"><span class="token-pulse"></span><span>NUTANIX AGENT GATEWAY</span></div><button aria-expanded="true" aria-label="Collapse monitor" class="token-toggle" id="token-toggle">⌃</button></div>
 <div class="nx-monitor-details">
 <div class="nx-model-label">MODEL REPORTED BY RESPONSE</div>
-<div class="nx-model-line"><div aria-hidden="true" class="nx-model-icon">✦</div><div><div id="nx-serving-model">Awaiting response</div><div id="nx-serving-provider">Unified Endpoint · Provider not yet verified</div></div><span class="nx-verified" id="nx-model-confidence">—</span></div>
+<div class="nx-model-line"><div aria-hidden="true" class="nx-model-icon">✦</div><div><div id="nx-serving-model">Awaiting response</div><div id="nx-serving-provider">Unified Endpoint · Awaiting gateway telemetry</div></div><span class="nx-verified" id="nx-model-confidence">—</span></div>
 <div class="nx-route-panel"><div class="nx-route-heading"><span>POTENTIAL ROUTES</span><b id="nx-endpoint-name">Unified Endpoint</b></div><div class="nx-model-options"><div class="nx-model-option" data-provider="openai">OpenAI</div><div class="nx-model-option" data-provider="anthropic">Claude</div><div class="nx-model-option" data-provider="private">Private NAI</div></div><div id="nx-route-hint">Provider highlights require verified NAI routing telemetry.</div></div>
 <div class="token-total"><strong id="token-total">0</strong><span>total tokens</span><em id="token-delta">Waiting for request</em></div>
 <div class="token-grid"><div><small>INPUT</small><b id="token-input">0</b></div><div><small>OUTPUT</small><b id="token-output">0</b></div><div><small>REQUESTS</small><b id="token-requests">0</b></div></div>
-<div class="token-route"><span>LAST ROUTE</span><strong id="token-route">Not verified</strong><small id="token-source">Token counts and model metadata must come from the backend.</small></div>
+<div class="token-route"><span>LAST ROUTE</span><strong id="token-route">Awaiting gateway telemetry</strong><small id="token-source">Token counts and model metadata must come from the backend.</small></div>
 </div>
 </aside>
 <footer><span>SeguroAuto · Powered by Nutanix Agent Gateway <span class="nx-demo-tag">Demo environment</span></span><span id="endpoint-label">MCP Connector: loading…</span></footer>
 <script src="/static/app.js"></script>
-<script>
-    /* Optional integration hook. Fire a nai:completion event after your backend
-       resolves the actual route. Do not feed selected model aliases as verified routes. */
-    (() => {
-      const el = (id) => document.getElementById(id);
-      const names = {openai:'OpenAI', anthropic:'Anthropic / Claude', private:'Private NAI'};
-      window.updateNaiGatewayMonitor = (result) => {
-        if (!result || typeof result !== 'object') return;
-        const serving = result.reported_model || result.serving_model || null;
-        const provider = typeof result.provider === 'string' ? result.provider.toLowerCase() : '';
-        const verified = result.route_verified === true;
-        el('nx-serving-model').textContent = serving ? String(serving) : 'Model not reported';
-        el('nx-serving-provider').textContent = verified ? (names[provider] || result.provider || 'Verified model') : 'Actual provider not verified';
-        el('nx-model-confidence').textContent = verified ? '✓ VERIFIED' : 'UNVERIFIED';
-        if (result.endpoint) el('nx-endpoint-name').textContent = String(result.endpoint);
-        document.querySelectorAll('.nx-model-option').forEach(node => node.classList.toggle('is-serving', verified && node.dataset.provider === provider));
-        el('nx-route-hint').textContent = verified ? 'Serving route confirmed by backend gateway telemetry.' : 'Illustrative routes only. The upstream is not confirmed.';
-        el('token-route').textContent = verified && provider ? (names[provider] || provider) : 'Not verified';
-        if (verified && provider) {
-          if (el('active-route')) el('active-route').textContent = names[provider] || provider;
-        }
-      };
-      document.addEventListener('nai:completion', (event) => window.updateNaiGatewayMonitor(event.detail));
-      // app.js already owns #token-toggle; preserve its handler.
-    })();
-  </script>
 </body>
 </html>
