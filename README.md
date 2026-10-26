@@ -2,7 +2,7 @@
 
 ## Overview
 
-SeguroAuto is an insurance web application (not real)  built to demonstrate, through a realistic business scenario, how **Nutanix Agent Gateway** helps govern AI model access, token consumption, MCP tools, and sensitive business operations.
+SeguroAuto is a fictional insurance web application built to demonstrate, through a realistic business scenario, how **Nutanix Agent Gateway** helps govern AI model access, token consumption, MCP tools, and sensitive business operations.
 
 The demo also shows how Agent Gateway simplifies the work of **Forward Deployed Engineering and Development teams** through a **Unified Endpoint** that abstracts access to public and private AI models. These can include models from OpenAI, Mistral, Google Gemini, Anthropic, and Azure, alongside private models deployed on **Nutanix Enterprise AI (NAI)**.
 
@@ -10,7 +10,7 @@ Teams can adjust model routing, access policies, high availability, and fallback
 
 For end users, SeguroAuto supports everyday insurance workflows such as checking a policy, reviewing a claim, and finding a repair shop. For **Systems Engineers**, the app offers technical views that reveal how requests flow through the Unified Endpoint and how MCP Connectors provide governed access to business tools.
 
-> **Demo environment:** SeguroAuto uses syntetic data and simulated business operations.
+> **Demo environment:** SeguroAuto uses fictional data and simulated business operations. It is designed to illustrate enterprise AI architecture and controls, not to process real insurance claims or payouts.
 
 ## Demo Objectives
 
@@ -157,18 +157,47 @@ nutanix-agent-gateway-se-demo/
 └── README.md                   This guide
 ```
 
-## Installation on macOS or Windows
+## Installation with Rancher Desktop (macOS or Windows)
+
+Rancher Desktop is the standard local container environment for this SE demo. **Use Rancher Desktop with the `dockerd (moby)` container engine**, which supports the `docker` CLI and Docker Compose commands in this guide. The commands below intentionally remain `docker ...` because Rancher Desktop provides a compatible Docker CLI.
 
 ### Prerequisites
 
-- Docker Desktop.
-- Network access to the shared hPOC environment for Live mode.
-- Git (optional if cloning the project from GitHub).
+- [Rancher Desktop](https://rancherdesktop.io/) installed and running, configured with **`dockerd (moby)`** as its container engine.
+- **Kubernetes disabled** in Rancher Desktop Preferences → Kubernetes → Enable Kubernetes (not required for this demo).
+- The `docker` CLI and `docker compose` plugin available in your terminal.
+- Network access to the shared hPOC environment **only for Live mode**.
+- Git to clone and update the repository.
+
+### Configure and Verify Rancher Desktop
+
+1. Open **Rancher Desktop** and select **Preferences → Container Engine → General → `dockerd (moby)`**. Restart/apply changes if prompted.
+2. Under **Preferences → Kubernetes**, disable Kubernetes to avoid allocating resources unnecessarily.
+3. Wait until Rancher Desktop has finished starting and run:
+
+   ```bash
+   docker --version
+   docker compose version
+   docker info
+   ```
+
+On **macOS (zsh)**, if `docker: command not found` appears even though Rancher Desktop is running, make its bundled CLI available in your shell:
+
+```bash
+export PATH="$HOME/.rd/bin:$PATH"
+docker --version
+```
+
+To persist this on macOS, add `export PATH="$HOME/.rd/bin:$PATH"` to `~/.zshrc` and open a new terminal (or run `source ~/.zshrc`). On **Windows**, reopen PowerShell after installing Rancher Desktop and check `docker --version` and `docker compose version`; ensure the Rancher Desktop CLI is available on your PATH if either is missing.
+
+If `docker info` cannot connect to the daemon, ensure Rancher Desktop is running with Moby selected. If you have multiple Docker contexts, check `docker context ls` and select the Rancher Desktop context shown by your installation before retrying. Do not assume a particular context name.
+
+> **Note:** The images and volumes created under Rancher Desktop are managed by Rancher Desktop; existing containers or volumes from another local runtime are not automatically transferred.
 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/<ORG_OR_USER>/nutanix-agent-gateway-se-demo.git
+git clone https://github.com/jovalen/nutanix-agent-gateway-se-demo.git
 cd nutanix-agent-gateway-se-demo
 ```
 
@@ -211,7 +240,7 @@ MCP_URL=http://mcp-mock:8001/mcp
 MCP_API_KEY=
 ```
 
-Start the mock service using its compose profile:
+Start the mock service using its Compose profile:
 
 ```bash
 docker compose --profile rehearsal up --build
@@ -219,13 +248,13 @@ docker compose --profile rehearsal up --build
 
 In this mode:
 
-- The mock MCP server runs locally within docker compose.
+- The mock MCP server runs locally within Docker Compose.
 - Model responses are deterministic.
 - The token monitor shows a local estimate.
 - Real NAI rate limiting is not tested.
 - MCP deployment and governance in NAI are not tested.
 
-This mode is only for demo preparation or development without access to the hPOC environment. The Live demo must use the Local MCP Server deployed inside NAI 2.7 or newer versions.
+This mode is only for demo preparation or development without access to the hPOC environment. The Live demo must use the Local MCP Server deployed inside NAI 2.7.
 
 ### Live Mode
 
@@ -307,7 +336,7 @@ In Live mode, the backend normalizes the `usage` object returned by the Unified 
 }
 ```
 
-In rehearsal mode, the monitor displays a clearly labeled local estimate. This is useful for practicing the demo without real credentials, but must not be presented as token usage measured by NAI.
+In Rehearsal mode, the monitor displays a clearly labeled local estimate. This is useful for practicing the demo without real credentials, but must not be presented as token usage measured by NAI.
 
 ## DEV and PROD Environments
 
@@ -335,7 +364,7 @@ MCP_API_KEY=...
 
 ## NAI Setup
 
-Exact labels may vary depending on the version and Hpoc environment, but the conceptual setup sequence is as follows.
+Exact labels may vary depending on the version and hPOC environment, but the conceptual setup sequence is as follows.
 
 ### 1. Create Providers
 
@@ -427,7 +456,7 @@ git tag mcp-v0.2.0
 git push origin mcp-v0.2.0
 ```
 
-If the GHCR package is private, create an **Image Registry Credential** in NAI for `ghcr.io` using a token with package-read permission. If the Hpoc cannot access GHCR, use the approved internal registry with the corresponding image name and tag.
+If the GHCR package is private, create an **Image Registry Credential** in NAI for `ghcr.io` using a token with package-read permission. If the hPOC cannot access GHCR, use the approved internal registry with the corresponding image name and tag.
 
 #### Create the Local MCP Server in NAI
 
@@ -486,7 +515,7 @@ OpenAI · Claude · Private NAI      Local MCP Server in NAI 2.7
 
 In Live mode, the application does not call `mcp-mock` directly, does not need your laptop's IP address, and does not require Cloudflare Tunnel. The MCP Server runs as a workload managed by NAI, while the Connector provides identity, tool filtering, and auditing.
 
-Docker compose retains `mcp-mock` for local rehearsal:
+Docker Compose retains `mcp-mock` for local Rehearsal:
 
 ```text
 SeguroAuto app → http://mcp-mock:8001/mcp
@@ -503,7 +532,7 @@ The same application and code work in both cases. What changes is the MCP entry 
 
 ## Complete Demo Walkthrough
 
-### 1.- Customer Experience
+### 1 — Customer Experience
 
 1. Open the SeguroAuto portal.
 2. Show the active policy.
@@ -521,7 +550,7 @@ The same application and code work in both cases. What changes is the MCP entry 
 
 5. Show that the application only knows the NAI endpoint and its associated API key. It always uses an OpenAI-compatible API schema, regardless of which models are part of the Unified Endpoint. Depending on the routing configuration, requests may be sent to different model endpoints, including when weighted routing is enabled.
 
-### 2.- MCP and Business Operations
+### 2 — MCP and Business Operations
 
 1. Select **Find a Repair Shop**.
 2. Show `find_repair_shops` in the audit trail.
@@ -533,7 +562,7 @@ Suggested talking point:
 
 > The application does not need a separate API integration for every business system. The agent is given governed tools, and the Gateway controls which ones it can access.
 
-### 3.- Unauthorized Operation
+### 3 — Unauthorized Operation
 
 1. Ask:
 
@@ -550,7 +579,7 @@ Suggested talking point:
 
 > The model can understand the intent, but the Gateway policy—not the model—determines whether the tool is available. Business-level authorization remains the responsibility of the underlying system.
 
-### 4.- Unified Endpoint
+### 4 — Unified Endpoint
 
 1. Run a query.
 2. Show the model alias and token counter.
@@ -563,7 +592,9 @@ Suggested talking point:
 
 > We changed the provider and the route, but we did not change the agent or the application.
 
-### 5.- Rate Limiting
+### 5 — Rate Limiting
+
+**Approximate duration — 3 minutes**
 
 1. Open the DEV configuration in NAI.
 2. Show the global limit and API-key-level limit.
@@ -577,7 +608,9 @@ Suggested talking point:
 
 The goal is to show that consumption can be controlled before it becomes an unexpected cost.
 
-### 6.- Fallback
+### 6 — Fallback
+
+**Approximate duration — 2 minutes**
 
 1. Configure OpenAI as the primary route.
 2. Configure Claude as the fallback.
@@ -670,7 +703,7 @@ Check:
 - The complete Unified Endpoint URL.
 - A valid virtual key.
 - The exact model alias.
-- Connectivity from Docker Desktop to the hPOC.
+- Connectivity from Rancher Desktop to the hPOC (including corporate VPN/network access).
 - Provider configuration and credentials in NAI.
 
 ### MCP Does Not Respond from NAI
@@ -685,7 +718,7 @@ Check the **Local MCP Server** deployment in NAI 2.7:
 - The virtual key used by the application belongs to the Connector.
 - `MCP_URL` contains the Connector URL, not `http://mcp-mock:8001/mcp`.
 
-`http://mcp-mock:8001/mcp` works only for local Rehearsal within Docker Desktop.
+`http://mcp-mock:8001/mcp` works only for local Rehearsal within Rancher Desktop.
 
 ### The Rate Limit Is Not Triggered
 
