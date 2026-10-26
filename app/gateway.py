@@ -30,9 +30,9 @@ class UnifiedEndpointClient:
             url = url[:-len("/chat/completions")]
         url += "/chat/completions"
         headers = {"Authorization": f"Bearer {self.cfg.nai_key}", "Content-Type": "application/json"}
-        payload = {"model": model, "messages": messages, "temperature": temperature}
+        payload = {"model": model, "messages": messages}
         try:
-            async with httpx.AsyncClient(timeout=90) as client:
+            async with httpx.AsyncClient(timeout=90, verify=self.cfg.tls_verify) as client:
                 response = await client.post(url, headers=headers, json=payload)
                 response.raise_for_status()
                 data = response.json()
@@ -42,12 +42,26 @@ class UnifiedEndpointClient:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise GatewayError("Unified Endpoint returned an unexpected chat response") from exc
+        # OpenAI-compatible gateways commonly return the resolved model in
+        # ``model``.  Keep the endpoint name separate: it is the route the
+        # application requested, not necessarily the upstream backend.
+        resolved_model = (
+            data.get("resolved_model")
+            or data.get("backend_model")
+            or data.get("model")
+        )
+        resolved_provider = (
+            data.get("provider")
+            or data.get("backend_provider")
+            or data.get("upstream_provider")
+        )
         return {
             "content": content,
             "raw": data,
             "model": model,
             "endpoint_name": self.cfg.nai_endpoint_name,
-            "resolved_model": data.get("model", model),
+            "resolved_model": resolved_model,
+            "resolved_provider": resolved_provider,
             "transport": "nai-unified-endpoint",
             "usage": normalize_usage(data),
             "usage_source": "unified-endpoint",

@@ -109,7 +109,18 @@ async def assistant(request: AssistantRequest):
                   "No inventes coberturas ni importes. Si una operación requiere aprobación humana, dilo claramente. "
                   f"Vista actual: {request.view}. Contexto de sistema obtenido mediante MCP:\n{context}")
         result = await llm.chat(model, [{"role": "system", "content": system}, {"role": "user", "content": request.message}])
-        return {**result, "model_key": request.model_key, "endpoint_name": result.get("endpoint_name", model), "tool": selected_tool, "tool_result": tool_result, "blocked": blocked, "view": request.view, "usage": result.get("usage", {})}
+        return {
+            **result,
+            "model_key": request.model_key,
+            "endpoint_name": result.get("endpoint_name", model),
+            "resolved_model": result.get("resolved_model"),
+            "resolved_provider": result.get("resolved_provider"),
+            "tool": selected_tool,
+            "tool_result": tool_result,
+            "blocked": blocked,
+            "view": request.view,
+            "usage": result.get("usage", {}),
+        }
     except (MCPError, GatewayError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -134,7 +145,17 @@ async def guided_run(request: AssistantRequest):
                   "siguiente paso y taller recomendado. No inventes datos.\n\n" + "\n".join(evidence))
         answer = await llm.chat(model, [{"role": "system", "content": "Responde en español con bullets breves y tono empático."}, {"role": "user", "content": prompt}])
         steps.append({"step": "llm_summary", "status": "ok", "model": model, "transport": answer["transport"]})
-        return {"answer": answer["content"], "model": model, "steps": steps, "usage": answer.get("usage", {}), "transport": answer.get("transport"), "usage_source": answer.get("usage_source")}
+        return {
+            "answer": answer["content"],
+            "model": model,
+            "endpoint_name": answer.get("endpoint_name", model),
+            "resolved_model": answer.get("resolved_model"),
+            "resolved_provider": answer.get("resolved_provider"),
+            "steps": steps,
+            "usage": answer.get("usage", {}),
+            "transport": answer.get("transport"),
+            "usage_source": answer.get("usage_source"),
+        }
     except (MCPError, GatewayError) as exc:
         steps.append({"step": "error", "status": "error", "detail": str(exc)})
         raise HTTPException(status_code=502, detail={"message": str(exc), "steps": steps}) from exc
