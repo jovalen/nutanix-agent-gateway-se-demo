@@ -157,47 +157,18 @@ nutanix-agent-gateway-se-demo/
 └── README.md                   This guide
 ```
 
-## Installation with Rancher Desktop (macOS or Windows)
-
-Rancher Desktop is the standard local container environment for this SE demo. **Use Rancher Desktop with the `dockerd (moby)` container engine**, which supports the `docker` CLI and Docker Compose commands in this guide. The commands below intentionally remain `docker ...` because Rancher Desktop provides a compatible Docker CLI.
+## Installation on macOS or Windows
 
 ### Prerequisites
 
-- [Rancher Desktop](https://rancherdesktop.io/) installed and running, configured with **`dockerd (moby)`** as its container engine.
-- **Kubernetes disabled** in Rancher Desktop Preferences → Kubernetes → Enable Kubernetes (not required for this demo).
-- The `docker` CLI and `docker compose` plugin available in your terminal.
-- Network access to the shared hPOC environment **only for Live mode**.
-- Git to clone and update the repository.
-
-### Configure and Verify Rancher Desktop
-
-1. Open **Rancher Desktop** and select **Preferences → Container Engine → General → `dockerd (moby)`**. Restart/apply changes if prompted.
-2. Under **Preferences → Kubernetes**, disable Kubernetes to avoid allocating resources unnecessarily.
-3. Wait until Rancher Desktop has finished starting and run:
-
-   ```bash
-   docker --version
-   docker compose version
-   docker info
-   ```
-
-On **macOS (zsh)**, if `docker: command not found` appears even though Rancher Desktop is running, make its bundled CLI available in your shell:
-
-```bash
-export PATH="$HOME/.rd/bin:$PATH"
-docker --version
-```
-
-To persist this on macOS, add `export PATH="$HOME/.rd/bin:$PATH"` to `~/.zshrc` and open a new terminal (or run `source ~/.zshrc`). On **Windows**, reopen PowerShell after installing Rancher Desktop and check `docker --version` and `docker compose version`; ensure the Rancher Desktop CLI is available on your PATH if either is missing.
-
-If `docker info` cannot connect to the daemon, ensure Rancher Desktop is running with Moby selected. If you have multiple Docker contexts, check `docker context ls` and select the Rancher Desktop context shown by your installation before retrying. Do not assume a particular context name.
-
-> **Note:** The images and volumes created under Rancher Desktop are managed by Rancher Desktop; existing containers or volumes from another local runtime are not automatically transferred.
+- Docker Desktop.
+- Network access to the shared hPOC environment for Live mode.
+- Git (optional if cloning the project from GitHub).
 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/jovalen/nutanix-agent-gateway-se-demo.git
+git clone https://github.com/<ORG_OR_USER>/nutanix-agent-gateway-se-demo.git
 cd nutanix-agent-gateway-se-demo
 ```
 
@@ -703,7 +674,7 @@ Check:
 - The complete Unified Endpoint URL.
 - A valid virtual key.
 - The exact model alias.
-- Connectivity from Rancher Desktop to the hPOC (including corporate VPN/network access).
+- Connectivity from Docker Desktop to the hPOC.
 - Provider configuration and credentials in NAI.
 
 ### MCP Does Not Respond from NAI
@@ -718,7 +689,7 @@ Check the **Local MCP Server** deployment in NAI 2.7:
 - The virtual key used by the application belongs to the Connector.
 - `MCP_URL` contains the Connector URL, not `http://mcp-mock:8001/mcp`.
 
-`http://mcp-mock:8001/mcp` works only for local Rehearsal within Rancher Desktop.
+`http://mcp-mock:8001/mcp` works only for local Rehearsal within Docker Desktop.
 
 ### The Rate Limit Is Not Triggered
 
