@@ -380,19 +380,6 @@ The Operations view runs a predefined, controlled investigation for claim `CLM-2
 * Summarize the evidence through the Unified Endpoint.
 * Present the result for human review.
 
-This guided workflow keeps the story predictable while showing how MCP data and model summarization work together. It is not autonomous agent planning.
-
-## Security and safe defaults
-
-* Never commit `.env`, virtual keys or provider credentials.
-* Keep provider credentials in NAI or another approved secret store.
-* Keep virtual keys server-side; do not place them in frontend code.
-* Keep TLS verification enabled except for an explicitly approved isolated test.
-* Use dedicated endpoints and keys for fallback validation.
-* Keep the fault-lab administration listener local-only.
-* Use fictional data in the demo.
-* Review sensitive-operation authorization in the destination business system.
-* Treat Rehearsal results as simulated; do not present them as NAI enforcement or production telemetry.
 
 ## Repository layout
 
@@ -419,32 +406,6 @@ nutanix-agent-gateway-se-demo/
 └── README.md                   This guide
 ```
 
-## Local validation
-
-Run from the repository root:
-
-```bash
-python3 -m unittest discover -s tests -p 'test_*.py'
-python3 -m compileall -q app mock_mcp fault_provider
-```
-
-Validate the Compose configuration without starting services:
-
-```bash
-docker compose config -q
-docker compose --profile rehearsal config -q
-```
-
-## Branch workflow
-
-Keep integration and demo changes on `dev` while the Rehearsal walkthrough and, where applicable, dedicated Live fallback validation are reviewed.
-
-Promote the tested change to `main` through the repository's normal pull-request process. Before opening the pull request:
-
-* Confirm that `.env` is not tracked.
-* Run the local validation commands.
-* Review the diff for internal links, credentials and environment-specific references.
-* Confirm that the published MCP image tag is the one used by the target environment.
 
 ## Public references
 
