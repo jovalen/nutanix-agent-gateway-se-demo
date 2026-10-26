@@ -1,26 +1,145 @@
-<!doctype html>
-<html lang="es">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>SeguroAuto | Área de cliente</title><link rel="stylesheet" href="/static/styles.css"/></head>
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>SeguroAuto | Customer Portal</title>
+<link href="/static/styles.css" rel="stylesheet"/>
+<style>
+    /* Nutanix-inspired demo accents. Keep the application's existing CSS as the base. */
+    :root { --nx-accent: #00bcef; --nx-ink: #202a36; }
+    .brand-mark { background: var(--nx-accent); color: #08222b; font-weight: 800; }
+    .nav-item.active { border-bottom-color: var(--nx-accent); }
+    .ai-orb, .msg-avatar { color: var(--nx-accent); }
+    .token-pulse { background: var(--nx-accent); }
+    .nx-demo-tag { font-size: 11px; letter-spacing: .07em; font-weight: 700; color: #476477; text-transform: uppercase; }
+
+    /* Enhanced dark Agent Gateway telemetry widget */
+    #token-monitor.nx-monitor { position:fixed; right:22px; bottom:48px; z-index:1000; width:min(360px,calc(100vw - 32px)); background:#101c2b; color:#e8f4fa; border:1px solid #31485c; border-radius:18px; box-shadow:0 16px 52px #07152155; overflow:hidden; padding:16px; box-sizing:border-box; font:inherit; }
+    .nx-monitor .token-top { display:flex; align-items:center; justify-content:space-between; padding:0; margin:0 0 14px; border:0; }
+    .nx-monitor .token-title { display:flex; align-items:center; gap:9px; color:#f7fdff; font-weight:750; letter-spacing:.02em; font-size:13px; }
+    .nx-monitor .token-pulse {display:inline-block; background:#00bcef; height:11px; width:11px; border-radius:4px;box-shadow:0 0 12px #00bcef88;}
+    .nx-monitor .token-toggle { background:#23394c; color:#c6e4f2; border:1px solid #3c5468; border-radius:7px; width:28px; height:28px; cursor:pointer; }
+    .nx-model-label {font-size:10px; color:#92a9bc; font-weight:750;letter-spacing:.11em;margin-bottom:8px;}
+    .nx-model-line {display:flex; align-items:center; gap:10px; padding:0 0 14px;}
+    .nx-model-icon {width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#24394c;color:#00bcef;font-size:21px;}
+    #nx-serving-model {font-size:17px;font-weight:750;color:#fff;line-height:1.2;}
+    #nx-serving-provider {font-size:11px;color:#adc0d0;margin-top:4px;}
+    .nx-verified {margin-left:auto; font-size:10px;color:#99afc0;white-space:nowrap;}
+    .nx-route-panel {background:#1b2e40;border:1px solid #334c60;border-radius:12px;padding:11px 12px;margin-bottom:12px;}
+    .nx-route-heading {display:flex;justify-content:space-between;gap:8px;color:#a5b9ca;font-size:10px;letter-spacing:.04em;margin-bottom:9px;}
+    .nx-route-heading b {color:#5bd2f0;letter-spacing:0; font-size:11px;}
+    .nx-model-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+    .nx-model-option {padding:7px 2px;border:1px solid #344e64;background:#263b4f;border-radius:7px;text-align:center;font-size:10px;color:#c4d6e5;white-space:nowrap;}
+    .nx-model-option.is-serving {background:#135067;border-color:#00bcef;color:#fff;box-shadow:inset 0 0 0 1px #00bcef55;}
+    #nx-route-hint {margin-top:9px;font-size:10px;color:#93aabd;line-height:1.4;}
+    .nx-monitor .token-total {display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-bottom:11px;}
+    .nx-monitor .token-total strong {font-size:27px;color:#f5fcff;font-weight:750;}
+    .nx-monitor .token-total span {font-size:11px;color:#a2b6c6;}
+    .nx-monitor .token-total em {font-size:10px;color:#65d3ee;font-style:normal;margin-left:auto;}
+    .nx-monitor .token-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:11px;}
+    .nx-monitor .token-grid > div {background:#1e3144;border-radius:9px;padding:9px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .nx-monitor .token-grid small {font-size:9px;color:#a7bacb;letter-spacing:.05em;}
+    .nx-monitor .token-grid b {color:#fff;font-size:16px;}
+    .nx-monitor .token-route {border-top:1px solid #31485c;padding-top:9px;display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center;}
+    .nx-monitor .token-route span {color:#a4b8c8;font-size:10px;}
+    .nx-monitor .token-route strong {color:#67d7f3;font-size:11px;}
+    .nx-monitor .token-route small {display:block;flex-basis:100%;color:#8ba3b6;font-size:10px;}
+    #token-monitor.nx-monitor.nx-collapsed {width:290px;}
+    .nx-collapsed .nx-monitor-details {display:none;}
+    @media(max-width:600px) {#token-monitor.nx-monitor{right:10px;bottom:10px;width:min(340px,calc(100vw - 20px));}}
+  </style>
+<style>[data-control-panel][hidden]{display:none!important}.control-tabs{flex-wrap:wrap}.nx-model-option.is-serving{background:#135067}</style></head>
 <body>
-  <header class="nav"><div class="brand"><div class="brand-mark">S</div><div><strong>SeguroAuto</strong><small>Tu movilidad, protegida</small></div></div><nav><button class="nav-item active" data-view="customer">Área de cliente</button><button class="nav-item" data-view="operations">Operaciones</button><button class="nav-item" data-view="control">SE Control Room</button></nav><div class="profile"><span class="avatar">JV</span><span>Jorge V.</span><span class="chev">⌄</span></div></header>
-  <main class="container">
-    <section class="welcome"><div><p class="crumb">ÁREA DE CLIENTE / SEGURO DE AUTO</p><h1 id="page-title">Hola, Usuario <span>👋</span></h1><p id="page-subtitle">Estamos aquí para ayudarte con tu póliza y tu siniestro.</p></div><div class="secure"><span>◉</span> Sesión segura</div></section>
-    <section id="customer-view" class="view active-view">
-      <div class="business-grid"><div class="main-column">
-        <div class="card policy-card"><div class="card-head"><div><p class="label">TU PÓLIZA</p><h2>Seguro Auto Premium</h2></div><span class="badge green">● Activa</span></div><div class="policy-meta"><div><small>MATRÍCULA</small><strong>1234 LMX</strong></div><div><small>VIGENCIA</small><strong>Hasta 14/06/2027</strong></div><div><small>Nº PÓLIZA</small><strong>AUTO-ES-88421</strong></div><div><small>COBERTURA</small><strong>Todo riesgo</strong></div></div><button class="link-btn quick" data-message="¿Qué coberturas y franquicia tiene mi póliza?">Consultar coberturas <span>→</span></button></div>
-        <div class="card claim-card"><div class="card-head"><div><p class="label">SINIESTRO EN CURSO</p><h2>Golpe en aparcamiento <span class="claim-id">CLM-2026-1043</span></h2></div><span class="badge amber">Peritación programada</span></div><div class="timeline"><div class="timeline-item done"><i>✓</i><div><strong>Parte recibido</strong><small>20 oct 2026 · 09:42</small></div></div><div class="timeline-item active"><i>2</i><div><strong>Peritación</strong><small>En curso · Te contactaremos pronto</small></div></div><div class="timeline-item"><i>3</i><div><strong>Reparación</strong><small>Pendiente de peritación</small></div></div></div><div class="claim-actions"><button class="outline quick" data-message="¿Cuál es el estado de mi siniestro y cuál es el siguiente paso?">Ver estado</button><button class="outline quick" data-message="Busca un taller concertado cerca del código postal 28001">Buscar taller</button></div></div>
-        <div class="assistant-card"><div class="assistant-head"><div class="ai-orb">✦</div><div><h2>Asistente SeguroAuto</h2><p>Consulta tu póliza y gestiona tu siniestro en lenguaje natural.</p></div><span class="ai-status">● Online</span></div><div id="conversation" class="conversation"><div class="assistant-msg"><div class="msg-avatar">✦</div><div class="bubble"><strong>Hola, Jorge</strong><br/>Puedo ayudarte con tu póliza, tu siniestro o encontrar un taller. ¿Qué necesitas?</div></div></div><div class="quick-row"><button class="suggestion quick" data-message="¿Qué cubre mi póliza?"><span>◈</span> Coberturas</button><button class="suggestion quick" data-message="¿Cuál es el estado de mi siniestro?"><span>◷</span> Estado del siniestro</button><button class="suggestion quick" data-message="Busca un taller cerca de 28001"><span>⌂</span> Buscar taller</button><button class="suggestion quick" data-message="Quiero solicitar la indemnización de mi siniestro"><span>€</span> Indemnización</button></div><div class="composer"><input id="message" placeholder="Escribe tu consulta…"/><select id="model"><option value="unified_endpoint">Unified Endpoint NAI</option></select><button id="send" class="send">Enviar</button></div></div>
-      </div><aside class="side-column"><div class="card help-card"><p class="label">GESTIONES RÁPIDAS</p><button class="action-row quick" data-message="Quiero abrir un nuevo parte de siniestro"><span class="action-icon blue">＋</span><span><strong>Abrir un parte</strong><small>Inicia una nueva gestión</small></span><b>→</b></button><button class="action-row quick" data-message="Busca un taller concertado cerca de 28001"><span class="action-icon purple">⌂</span><span><strong>Buscar taller</strong><small>Encuentra uno cerca de ti</small></span><b>→</b></button><button class="action-row quick" data-message="Necesito asistencia en carretera"><span class="action-icon orange">⌁</span><span><strong>Asistencia 24h</strong><small>Estamos disponibles</small></span><b>→</b></button></div><div class="card trust-card"><span class="shield">♢</span><h3>Tus datos, protegidos</h3><p>Tu asistente solo puede consultar la información necesaria. Las operaciones sensibles requieren validación humana.</p><a>Más información sobre seguridad →</a></div></aside></div>
-    </section>
-    <section id="operations-view" class="view"><div class="ops-header"><div><p class="crumb">VISTA INTERNA / OPERACIONES</p><h2>Gestión de siniestros asistida</h2><p>El agente reduce tiempos de consulta sin saltarse los controles de negocio.</p></div><button id="guided" class="primary">▶ Ejecutar jornada completa</button></div><div class="ops-grid"><div class="card queue"><div class="card-head"><div><p class="label">COLA DE TRABAJO</p><h2>Siniestros de hoy</h2></div><span class="badge green">12 gestionados</span></div><div class="queue-row"><span class="status-dot amber"></span><div><strong>CLM-2026-1043</strong><small>Peritación programada · Jorge V.</small></div><span class="queue-time">Ahora</span></div><div class="queue-row"><span class="status-dot green"></span><div><strong>CLM-2026-1041</strong><small>Documentación completa · Ana M.</small></div><span class="queue-time">09:12</span></div><div class="queue-row"><span class="status-dot blue"></span><div><strong>CLM-2026-1038</strong><small>Taller asignado · Carlos R.</small></div><span class="queue-time">08:47</span></div></div><div class="card ops-insight"><p class="label">AI OPERATIONS COPILOT</p><h2 id="ops-result-title">Listo para revisar un caso</h2><div id="ops-result" class="ops-result">Ejecuta la jornada completa para consultar póliza, siniestro y taller mediante el MCP y obtener un resumen.</div></div></div></section>
-    <section id="control-view" class="view"><div class="ops-header"><div><p class="crumb">SE DEMO / NUTANIX AGENT GATEWAY</p><h2>Control Room</h2><p>La aplicación de negocio sigue siendo la protagonista; aquí hacemos visible el control plane.</p></div><span id="live-pill" class="live-pill">● GATEWAY LIVE</span></div><div class="control-tabs"><button class="control-tab active" data-control="infra">Infra Manager</button><button class="control-tab" data-control="devops">Dev/Ops Manager</button></div><div class="control-grid"><div class="card health-card"><div class="card-head"><div><p class="label">RUNTIME HEALTH</p><h2 id="control-title">Disponibilidad de inferencia</h2></div><span class="badge green">Healthy</span></div><div class="health-bars"><div><span>Unified Endpoint</span><b>99.98%</b><i><em style="width:99%"></em></i></div><div><span>Private NAI model</span><b>Ready</b><i><em style="width:87%"></em></i></div><div><span>MCP connector</span><b id="mcp-health">Connected</b><i><em style="width:94%"></em></i></div></div><div class="control-note" id="control-note">Routing híbrido y fallback permiten mantener la experiencia aunque cambie el proveedor de inferencia.</div></div><div class="card signals-card"><p class="label">GOVERNANCE SIGNALS</p><div class="signal"><span>LLM requests via gateway</span><strong id="metric-llm">0</strong></div><div class="signal"><span>MCP tools visible</span><strong id="metric-tools">—</strong></div><div class="signal danger-signal"><span>Blocked sensitive actions</span><strong id="metric-blocked">0</strong></div><div class="route-box"><small>ACTIVE ROUTE</small><strong id="active-route">Private NAI</strong><span>virtual key · scoped to SeguroAuto</span></div></div><div class="card audit-card"><div class="card-head"><div><p class="label">RECENT AUDIT TRAIL</p><h2>Agent activity</h2></div><span class="badge purple">MCP</span></div><div id="audit-log" class="audit-log"><div><span class="audit-icon">✓</span><p><strong>Policy check</strong><small>get_customer_policy · read-only</small></p><time>now</time></div><div><span class="audit-icon">✓</span><p><strong>Claim status</strong><small>get_claim_status · read-only</small></p><time>now</time></div><div><span class="audit-icon blocked-icon">!</span><p><strong>Payout approval</strong><small>blocked by policy</small></p><time>—</time></div></div></div></div></section>
-  </main>
-  <aside id="token-monitor" class="token-monitor" aria-label="Monitor de tokens del Unified Endpoint">
-    <div class="token-top"><div class="token-title"><span class="token-pulse"></span><span>UNIFIED ENDPOINT</span></div><button id="token-toggle" class="token-toggle" aria-label="Contraer monitor">⌃</button></div>
-    <div class="token-total"><strong id="token-total">0</strong><span>tokens utilizados</span><em id="token-delta">esperando llamada</em></div>
-    <div class="token-grid"><div><small>INPUT</small><b id="token-input">0</b></div><div><small>OUTPUT</small><b id="token-output">0</b></div><div><small>REQUESTS</small><b id="token-requests">0</b></div></div>
-    <div class="token-route"><span>BACKEND REPORTADO POR NAI</span><strong id="token-route">Esperando respuesta…</strong><small id="token-source">El presupuesto se controla en NAI</small></div>
-  </aside>
-  <footer><span>SeguroAuto · Demo de Nutanix Agent Gateway</span><span id="endpoint-label">MCP connector: loading…</span></footer>
-  <script src="/static/app.js"></script>
-</body></html>
+<header class="nav">
+<div class="brand"><div class="brand-mark">S</div><div><strong>SeguroAuto</strong><small>Keeping you moving, with confidence</small></div></div>
+<nav aria-label="Main navigation">
+<button class="nav-item active" data-view="customer">Customer Portal</button>
+<button class="nav-item" data-view="operations">Operations</button>
+<button class="nav-item" data-view="control">SE Control Room</button>
+</nav>
+<div class="profile"><span class="avatar">DC</span><span>Demo Customer</span><span class="chev">⌄</span></div>
+</header>
+<main class="container">
+<section class="welcome">
+<div><p class="crumb">CUSTOMER PORTAL / AUTO INSURANCE</p><h1 id="page-title">Welcome back <span>👋</span></h1><p id="page-subtitle">We're here to help with your policy and claim.</p></div>
+<div class="secure"><span>◉</span> Secure session</div>
+</section>
+<section class="view active-view" id="customer-view">
+<div class="business-grid"><div class="main-column">
+<div class="card policy-card">
+<div class="card-head"><div><p class="label">YOUR POLICY</p><h2>Premium Auto Insurance</h2></div><span class="badge green">● Active</span></div>
+<div class="policy-meta"><div><small>LICENSE PLATE</small><strong>1234 LMX</strong></div><div><small>VALID UNTIL</small><strong>14 Jun 2027</strong></div><div><small>POLICY NUMBER</small><strong>AUTO-ES-88421</strong></div><div><small>COVERAGE</small><strong>Comprehensive</strong></div></div>
+<button class="link-btn quick" data-message="What does my policy cover, and what is my deductible?">View coverage <span>→</span></button>
+</div>
+<div class="card claim-card">
+<div class="card-head"><div><p class="label">OPEN CLAIM</p><h2>Parking lot damage <span class="claim-id">CLM-2026-1043</span></h2></div><span class="badge amber">Inspection scheduled</span></div>
+<div class="timeline"><div class="timeline-item done"><i>✓</i><div><strong>Claim received</strong><small>20 Oct 2026 · 09:42</small></div></div><div class="timeline-item active"><i>2</i><div><strong>Damage assessment</strong><small>In progress · We'll contact you soon</small></div></div><div class="timeline-item"><i>3</i><div><strong>Repairs</strong><small>Awaiting assessment</small></div></div></div>
+<div class="claim-actions"><button class="outline quick" data-message="What is the status of my claim and what happens next?">View status</button><button class="outline quick" data-message="Find an approved repair shop near postal code 28001">Find a repair shop</button></div>
+</div>
+<div class="assistant-card">
+<div class="assistant-head"><div class="ai-orb">✦</div><div><h2>SeguroAuto AI Assistant</h2><p>Ask about your policy or manage a claim in natural language.</p></div><span class="ai-status">● Online</span></div>
+<div class="conversation" id="conversation"><div class="assistant-msg"><div class="msg-avatar">✦</div><div class="bubble"><strong>Welcome back</strong><br/>I can help with your policy, check your claim, or find a repair shop. What would you like to do?</div></div></div>
+<div class="quick-row"><button class="suggestion quick" data-message="What does my policy cover?"><span>◈</span> Coverage</button><button class="suggestion quick" data-message="What is the status of my claim?"><span>◷</span> Claim status</button><button class="suggestion quick" data-message="Find a repair shop near 28001"><span>⌂</span> Find a repair shop</button><button class="suggestion quick" data-message="I want to request a payout for my claim"><span>€</span> Claim payout</button></div>
+<div class="composer"><input aria-label="Message to AI assistant" id="message" placeholder="Type your question…"/><select aria-hidden="true" aria-label="AI model" id="model" style="display:none"><option value="unified_endpoint">NAI Unified Endpoint</option></select><button class="send" id="send">Send</button></div>
+</div>
+</div><aside class="side-column">
+<div class="card help-card"><p class="label">QUICK ACTIONS</p><button class="action-row quick" data-message="I want to file a new insurance claim"><span class="action-icon blue">＋</span><span><strong>File a claim</strong><small>Start a new claim</small></span><b>→</b></button><button class="action-row quick" data-message="Find an approved repair shop near 28001"><span class="action-icon purple">⌂</span><span><strong>Find a repair shop</strong><small>Find one near you</small></span><b>→</b></button><button class="action-row quick" data-message="I need roadside assistance"><span class="action-icon orange">⌁</span><span><strong>24/7 roadside assistance</strong><small>We're here when you need us</small></span><b>→</b></button></div>
+<div class="card trust-card"><span class="shield">♢</span><h3>Your data, protected</h3><p>Your assistant can only access the information it needs. Sensitive actions require appropriate authorization and, where applicable, human approval.</p><a>Learn about security →</a></div>
+</aside></div>
+</section>
+<section class="view" id="operations-view">
+<div class="ops-header"><div><p class="crumb">INTERNAL VIEW / OPERATIONS</p><h2>AI-assisted claims management</h2><p>The agent speeds up information retrieval without bypassing business controls.</p></div><button class="primary" id="guided">▶ Analyze Claim with AI</button></div>
+<div class="ops-grid"><div class="card queue"><div class="card-head"><div><p class="label">WORK QUEUE</p><h2>Today's claims</h2></div><span class="badge green">12 processed</span></div><div class="queue-row"><span class="status-dot amber"></span><div><strong>CLM-2026-1043</strong><small>Inspection scheduled · Customer 001</small></div><span class="queue-time">Now</span></div><div class="queue-row"><span class="status-dot green"></span><div><strong>CLM-2026-1041</strong><small>Documents complete · Customer 002</small></div><span class="queue-time">09:12</span></div><div class="queue-row"><span class="status-dot blue"></span><div><strong>CLM-2026-1038</strong><small>Repair shop assigned · Customer 003</small></div><span class="queue-time">08:47</span></div></div>
+<div class="card ops-insight"><p class="label">AI OPERATIONS COPILOT</p><h2 id="ops-result-title">Ready to review a claim</h2><div class="ops-result" id="ops-result">Run the guided workflow to retrieve policy, claim, and repair-shop information through MCP and generate a summary.</div></div></div>
+</section>
+<section class="view" id="control-view">
+<div class="ops-header"><div><p class="crumb">SE DEMO / NUTANIX AGENT GATEWAY</p><h2>Control Room</h2><p>The business application remains front and center. This view reveals the governance and routing behind it.</p></div><span class="live-pill" id="live-pill">● GATEWAY LIVE</span></div>
+<div class="control-tabs"><button class="control-tab active" data-control="infra">Infrastructure</button><button class="control-tab" data-control="devops">AI Platform &amp; DevOps</button><button class="control-tab" data-control="security">Security &amp; Governance</button></div>
+<div class="control-grid"><div class="card health-card"><div class="card-head"><div><p class="label">RUNTIME HEALTH</p><h2 id="control-title">Inference availability</h2></div><span class="badge green">Not measured</span></div><div class="health-bars"><div><span>Unified Endpoint</span><b>Not measured</b><i><em style="width:0%"></em></i></div><div><span>Private NAI model</span><b>Not measured</b><i><em style="width:0%"></em></i></div><div><span>MCP Connector</span><b id="mcp-health">Not measured</b><i><em style="width:0%"></em></i></div></div><div class="control-note" id="control-note">Hybrid routing and fallback help maintain continuity when an inference provider changes or becomes unavailable.</div></div>
+<div class="card signals-card"><p class="label">GOVERNANCE SIGNALS</p><div class="signal"><span>LLM requests observed by this app</span><strong id="metric-llm">0</strong></div><div class="signal"><span>Available MCP tools</span><strong id="metric-tools">—</strong></div><div class="signal danger-signal"><span>Blocked sensitive actions</span><strong id="metric-blocked">0</strong></div><div class="route-box"><small>ACTIVE ROUTE</small><strong id="active-route">No verified route yet</strong><span>Virtual key · scoped to SeguroAuto</span></div></div>
+<div class="card audit-card"><div class="card-head"><div><p class="label">RECENT AUDIT TRAIL</p><h2>Agent activity</h2></div><span class="badge purple">MCP</span></div><div class="audit-log" id="audit-log"><div>No application events recorded yet</div></div></div><div class="card" data-control-panel="infra"><h3>Infrastructure perspective</h3><p>View reported models and endpoint configuration. Serving provider requires verified NAI telemetry.</p></div><div class="card" data-control-panel="devops" hidden=""><h3>Platform and DevOps perspective</h3><p>Token totals and request counters are collected by this application. Gateway-enforced rate limits must be validated in NAI.</p></div><div class="card" data-control-panel="security" hidden=""><h3>Security perspective</h3><p>The application enforces a demo-level payout block. MCP Connector tool allowlists and downstream authorization must be checked separately.</p></div></div>
+</section>
+</main>
+<aside aria-label="Nutanix Agent Gateway telemetry" class="token-monitor nx-monitor" id="token-monitor">
+<div class="token-top"><div class="token-title"><span class="token-pulse"></span><span>NUTANIX AGENT GATEWAY</span></div><button aria-expanded="true" aria-label="Collapse monitor" class="token-toggle" id="token-toggle">⌃</button></div>
+<div class="nx-monitor-details">
+<div class="nx-model-label">MODEL REPORTED BY RESPONSE</div>
+<div class="nx-model-line"><div aria-hidden="true" class="nx-model-icon">✦</div><div><div id="nx-serving-model">Awaiting response</div><div id="nx-serving-provider">Unified Endpoint · Provider not yet verified</div></div><span class="nx-verified" id="nx-model-confidence">—</span></div>
+<div class="nx-route-panel"><div class="nx-route-heading"><span>POTENTIAL ROUTES</span><b id="nx-endpoint-name">Unified Endpoint</b></div><div class="nx-model-options"><div class="nx-model-option" data-provider="openai">OpenAI</div><div class="nx-model-option" data-provider="anthropic">Claude</div><div class="nx-model-option" data-provider="private">Private NAI</div></div><div id="nx-route-hint">Provider highlights require verified NAI routing telemetry.</div></div>
+<div class="token-total"><strong id="token-total">0</strong><span>total tokens</span><em id="token-delta">Waiting for request</em></div>
+<div class="token-grid"><div><small>INPUT</small><b id="token-input">0</b></div><div><small>OUTPUT</small><b id="token-output">0</b></div><div><small>REQUESTS</small><b id="token-requests">0</b></div></div>
+<div class="token-route"><span>LAST ROUTE</span><strong id="token-route">Not verified</strong><small id="token-source">Token counts and model metadata must come from the backend.</small></div>
+</div>
+</aside>
+<footer><span>SeguroAuto · Powered by Nutanix Agent Gateway <span class="nx-demo-tag">Demo environment</span></span><span id="endpoint-label">MCP Connector: loading…</span></footer>
+<script src="/static/app.js"></script>
+<script>
+    /* Optional integration hook. Fire a nai:completion event after your backend
+       resolves the actual route. Do not feed selected model aliases as verified routes. */
+    (() => {
+      const el = (id) => document.getElementById(id);
+      const names = {openai:'OpenAI', anthropic:'Anthropic / Claude', private:'Private NAI'};
+      window.updateNaiGatewayMonitor = (result) => {
+        if (!result || typeof result !== 'object') return;
+        const serving = result.reported_model || result.serving_model || null;
+        const provider = typeof result.provider === 'string' ? result.provider.toLowerCase() : '';
+        const verified = result.route_verified === true;
+        el('nx-serving-model').textContent = serving ? String(serving) : 'Model not reported';
+        el('nx-serving-provider').textContent = verified ? (names[provider] || result.provider || 'Verified model') : 'Actual provider not verified';
+        el('nx-model-confidence').textContent = verified ? '✓ VERIFIED' : 'UNVERIFIED';
+        if (result.endpoint) el('nx-endpoint-name').textContent = String(result.endpoint);
+        document.querySelectorAll('.nx-model-option').forEach(node => node.classList.toggle('is-serving', verified && node.dataset.provider === provider));
+        el('nx-route-hint').textContent = verified ? 'Serving route confirmed by backend gateway telemetry.' : 'Illustrative routes only. The upstream is not confirmed.';
+        el('token-route').textContent = verified && provider ? (names[provider] || provider) : 'Not verified';
+        if (verified && provider) {
+          if (el('active-route')) el('active-route').textContent = names[provider] || provider;
+        }
+      };
+      document.addEventListener('nai:completion', (event) => window.updateNaiGatewayMonitor(event.detail));
+      // app.js already owns #token-toggle; preserve its handler.
+    })();
+  </script>
+</body>
+</html>
