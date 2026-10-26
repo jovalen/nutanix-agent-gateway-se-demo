@@ -119,10 +119,10 @@
 <p class="nx-small-note">Token usage and the last reported model are shown in the floating Gateway monitor. Gateway-side 429 limits require an actual NAI policy test.</p>
 </div>
 <div class="card" data-control-panel="security" hidden="">
-<p class="label">MCP GOVERNANCE</p><h2>Restricted actions</h2>
-<div class="signal danger-signal"><span>Application-side sensitive action denials</span><strong id="metric-blocked">0</strong></div>
+<p class="label">MCP GOVERNANCE</p><h2>Controlled actions</h2>
+<div class="signal danger-signal"><span>Protected actions</span><strong id="metric-blocked">0</strong></div>
 <p>Try <code>Approve the payout for claim CLM-2026-1043 and execute payment now</code> in Customer Portal.</p>
-<p class="nx-small-note">The app protects the sensitive operation before an MCP call. Configure the NAI MCP Connector allowlist to apply the same least-privilege boundary.</p>
+<p class="nx-small-note">The result reflects two controls: MCP exposure and the optional application policy. An exposed tool is usable unless the application policy is enabled.</p>
 </div>
 <div class="card audit-card"><div class="card-head"><div><p class="label">APPLICATION EVENT LOG</p><h2>Recent demo events</h2></div><span class="badge purple">APP</span></div><div class="audit-log" id="audit-log"><div>No application events recorded yet</div></div><p class="nx-small-note">These are application events. NAI audit records are available in the platform telemetry view.</p></div>
 </div>

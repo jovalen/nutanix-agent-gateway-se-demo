@@ -44,7 +44,7 @@ class UnifiedEndpointClient:
     def __init__(self, cfg: Settings):
         self.cfg = cfg
 
-    async def chat(self, model: str, messages: list[dict[str, Any]], temperature: float = 0.2) -> dict[str, Any]:
+    async def chat(self, model: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
         if self.cfg.mock_llm or not self.cfg.nai_url or not self.cfg.nai_key or not self.cfg.nai_endpoint_name:
             return self._mock_chat(model, messages)
 
@@ -53,13 +53,17 @@ class UnifiedEndpointClient:
             url = url[:-len("/chat/completions")]
         url += "/chat/completions"
         headers = {"Authorization": f"Bearer {self.cfg.nai_key}", "Content-Type": "application/json"}
-        payload = {"model": model, "messages": messages, "temperature": temperature}
+        payload = {"model": model, "messages": messages, "max_tokens": self.cfg.llm_max_tokens,}
         try:
             # TLS verification is controlled by TLS_VERIFY and is enabled by default.
             # Only disable it for an explicitly approved, isolated test environment.
             async with httpx.AsyncClient(timeout=90, verify=self.cfg.tls_verify) as client:
-                response = await client.post(url, headers=headers, json=payload)
-                response.raise_for_status()
+                response = await client.post(url, headers=headers, json=payload,)
+                if response.is_error:
+                    detail = response.text.strip().replace("\n", " ")[:1000]
+                    raise GatewayError(
+                        f"Unified Endpoint HTTP {response.status_code}: {detail}"
+                    )
                 data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             raise GatewayError(f"Unified Endpoint request failed: {exc}") from exc

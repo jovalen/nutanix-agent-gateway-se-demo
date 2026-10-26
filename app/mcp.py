@@ -16,6 +16,19 @@ class MCPError(RuntimeError):
     pass
 
 
+class MCPToolDenied(MCPError):
+    """A tools/call response rejected by MCP policy.
+
+    NAI MCP Connectors may return a JSON-RPC error for a policy denial, while
+    an MCP server may return the standard ``result.isError`` shape. The client
+    normalizes the former so the application can present both consistently.
+    """
+
+    def __init__(self, message: str, code: int | None = None):
+        super().__init__(message)
+        self.code = code
+
+
 class MCPClient:
     """MCP Streamable HTTP client using discovered, connector-scoped tool names."""
 
@@ -73,6 +86,10 @@ class MCPClient:
                     message = f"MCP HTTP {response.status_code}"
                     if detail:
                         message += f": {detail}"
+                    # A Connector may surface a policy decision as HTTP 403
+                    # rather than a JSON-RPC error object.
+                    if payload.get("method") == "tools/call" and response.status_code == 403:
+                        raise MCPToolDenied(message, response.status_code)
                     raise MCPError(message)
                 return self._parse_response(response), response
         except MCPError:
@@ -117,7 +134,11 @@ class MCPClient:
         }
         data, _ = await self._post(payload)
         if "error" in data:
-            raise MCPError(data["error"].get("message", "MCP error"))
+            error = data["error"] or {}
+            message = error.get("message", "MCP error")
+            if method == "tools/call":
+                raise MCPToolDenied(message, error.get("code"))
+            raise MCPError(message)
         return data.get("result", data)
 
     @staticmethod
@@ -167,7 +188,17 @@ class MCPClient:
                 real_name = name
             else:
                 raise MCPError(f"Tool '{name}' is not exposed by the MCP connector")
-        return await self.request(
-            "tools/call",
-            {"name": real_name, "arguments": arguments or {}},
-        )
+        try:
+            return await self.request(
+                "tools/call",
+                {"name": real_name, "arguments": arguments or {}},
+            )
+        except MCPToolDenied as exc:
+            # Some NAI Connector policy decisions are JSON-RPC errors rather
+            # than an MCP result with isError=true. Keep one app-level shape.
+            return {
+                "isError": True,
+                "policy_source": "nai-mcp-connector",
+                "mcp_error_code": exc.code,
+                "content": [{"type": "text", "text": f"DENIED_BY_POLICY: {exc}"}],
+            }

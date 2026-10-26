@@ -21,12 +21,14 @@ services:
       MCP_REPAIR_TOOL: ${MCP_REPAIR_TOOL:-find_repair_shops}
       MCP_CREATE_CLAIM_TOOL: ${MCP_CREATE_CLAIM_TOOL:-create_claim}
       MCP_BLOCKED_TOOL: ${MCP_BLOCKED_TOOL:-approve_claim_payout}
+      APP_POLICY_DENY_PAYOUT: ${APP_POLICY_DENY_PAYOUT:-false}
       MOCK_LLM: ${MOCK_LLM:-true}
       ENABLE_LIVE_FALLBACK_TEST: ${ENABLE_LIVE_FALLBACK_TEST:-false}
       NAI_FALLBACK_TEST_URL: ${NAI_FALLBACK_TEST_URL:-}
       NAI_FALLBACK_TEST_KEY: ${NAI_FALLBACK_TEST_KEY:-}
       NAI_FALLBACK_TEST_MODEL: ${NAI_FALLBACK_TEST_MODEL:-}
       NAI_FALLBACK_TEST_TLS_VERIFY: ${NAI_FALLBACK_TEST_TLS_VERIFY:-true}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-512}
 
   # Local Rehearsal service. Live deployments use the NAI MCP Connector.
   mcp-mock:
@@ -36,6 +38,8 @@ services:
       dockerfile: mock_mcp/Dockerfile
     container_name: nag-se-demo-mcp
     command: uvicorn mock_mcp.server:app --host 0.0.0.0 --port 8001
+    environment:
+      MOCK_MCP_EXPOSE_PAYOUT: ${MOCK_MCP_EXPOSE_PAYOUT:-true}
     ports:
       - "${MCP_MOCK_PORT:-8001}:8001"
     healthcheck:
