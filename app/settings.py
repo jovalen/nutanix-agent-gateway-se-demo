@@ -8,14 +8,14 @@ def env(name: str, default: str = "") -> str:
 
 @dataclass
 class Settings:
-    demo_mode: str = env("DEMO_MODE", "live")
+    demo_mode: str = env("DEMO_MODE", "rehearsal")
     nai_url: str = env("NAI_UNIFIED_ENDPOINT_URL")
     nai_endpoint_name: str = env("NAI_UNIFIED_ENDPOINT_NAME")
     nai_key: str = env("NAI_API_KEY")
     mcp_url: str = env("MCP_URL", "http://mcp-mock:8001/mcp")
     mcp_key: str = env("MCP_API_KEY")
     mcp_protocol_version: str = env("MCP_PROTOCOL_VERSION", "2025-06-18")
-    # Lab-only workaround for an hPOC certificate/hostname mismatch. Keep true in production.
+    # TLS verification is enabled by default for Live and Rehearsal connections.
     # TLS_VERIFY applies to both the Unified Endpoint and MCP. MCP_TLS_VERIFY remains
     # as a backwards-compatible fallback for older .env files.
     tls_verify: bool = env("TLS_VERIFY", env("MCP_TLS_VERIFY", "true")).lower() not in {"0", "false", "no", "off"}
@@ -24,7 +24,11 @@ class Settings:
     repair_tool: str = env("MCP_REPAIR_TOOL", "find_repair_shops")
     create_claim_tool: str = env("MCP_CREATE_CLAIM_TOOL", "create_claim")
     blocked_tool: str = env("MCP_BLOCKED_TOOL", "approve_claim_payout")
+    # Optional application-side guard. Disabled by default so an exposed tool
+    # is usable; enable it only when the demo should enforce local policy.
+    app_policy_deny_payout: bool = env("APP_POLICY_DENY_PAYOUT", "false").lower() in {"1", "true", "yes"}
     mock_llm: bool = env("MOCK_LLM", "false").lower() in {"1", "true", "yes"}
+    llm_max_tokens: int = int(env("LLM_MAX_TOKENS", "512"))
 
     @property
     def models(self) -> dict[str, str]:
