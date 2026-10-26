@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any
+import re
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from .settings import settings
 from .gateway import GatewayError, UnifiedEndpointClient
@@ -83,7 +84,19 @@ async def call_tool(request: ToolRequest):
 
 def choose_tool(message: str) -> tuple[str | None, dict[str, Any]]:
     text = message.casefold()
-    if any(x in text for x in ("approve payout", "approve payment", "authorize payout", "autorizar pago", "aprobar indemnización", "aprobar indemnizacion")):
+    # An instruction to execute/authorize an actual payout is distinct from asking
+    # about eligibility, status, or the payout process. Denial is app-side unless
+    # NAI supplies an independently verified policy-denial event.
+    payment_words = r"(?:payout|payment|compensation|indemnizaci[oó]n|pago)"
+    authorization_words = r"(?:approve|authorize|authorise|execute|pay|process|release|issue|send|aprobar|autorizar|ejecutar|pagar|paga)"
+    authorization = rf"\b{authorization_words}\b"
+    payment = rf"\b{payment_words}\b"
+    approval_intent = (
+        re.search(authorization + r".{0,120}" + payment, text)
+        or re.search(payment + r".{0,120}" + authorization, text)
+        or re.search(r"\b(?:pay|pagar|paga)\b.{0,80}\b(?:claim|siniestro|parte)\b", text)
+    )
+    if approval_intent:
         return settings.blocked_tool, {"claim_id": "CLM-2026-1043", "amount": 1840}
     if any(x in text for x in ("payout", "compensation", "indemnización", "indemnizacion")):
         return settings.claim_tool, {"claim_id": "CLM-2026-1043"}
@@ -101,18 +114,31 @@ def tool_text(result: dict[str, Any]) -> str:
     content = result.get("content", [])
     return "\n".join(item.get("text", str(item)) for item in content) if isinstance(content, list) else str(result)
 
+def blocked_payout_response(request: AssistantRequest) -> dict[str, Any]:
+    """Return the demo guard response without contacting MCP or the LLM."""
+    return {"content": "This payout cannot be approved or executed by the AI assistant. Human authorization is required; no payment was made.",
+            "model_key": request.model_key, "tool": settings.blocked_tool,
+            "tool_invoked": False, "tool_result": None,
+            "blocked": True,
+            "block_reason": "Payout approval requires human authorization. No payout was executed.",
+            "policy_source": "application-demo-guard", "gateway_denial_verified": False,
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            "usage_source": "no-llm-request", "gateway_monitor": None,
+            "view": request.view}
+
 @app.post("/api/assistant")
 async def assistant(request: AssistantRequest):
     model = settings.nai_endpoint_name or "rehearsal-unified-endpoint"
     selected_tool, arguments = choose_tool(request.message)
+    # Hard guard first: do not even call tools/list for a sensitive operation.
+    if selected_tool == settings.blocked_tool:
+        return blocked_payout_response(request)
     tool_result = None
     blocked, block_reason = False, None
     try:
         available = await mcp.list_tools()
         names = {tool.get("name") for tool in available}
-        if selected_tool == settings.blocked_tool:
-            blocked, block_reason = True, "Payout approval requires human authorization. No payout was executed."
-        elif selected_tool and selected_tool not in names:
+        if selected_tool and selected_tool not in names:
             blocked, block_reason = True, "This tool is not available through the MCP connector."
         elif selected_tool:
             tool_result = await mcp.call_tool(selected_tool, arguments)
@@ -129,7 +155,9 @@ async def assistant(request: AssistantRequest):
         result = await llm.chat(model, [{"role": "system", "content": system},
                                         {"role": "user", "content": request.message}])
         return {**result, "model_key": request.model_key, "tool": selected_tool,
-                "tool_result": tool_result, "blocked": blocked,
+                "tool_result": tool_result, "tool_invoked": bool(selected_tool and tool_result is not None),
+                "policy_source": "application" if blocked else None,
+                "gateway_denial_verified": False, "blocked": blocked,
                 "block_reason": block_reason, "view": request.view}
     except (MCPError, GatewayError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -156,7 +184,7 @@ async def guided_run(request: AssistantRequest):
             steps.append({"step": "mcp_tool_call", "status": "ok", "tool": name})
         prompt = ("Summarize this fictional insurance case, including coverage, claim status, next steps, "
                   "and repair options. Use only the following evidence:\n\n" + "\n".join(evidence))
-        answer = await llm.chat(model, [{"role": "system", "content": "Respond in English with short bullets. Never invent facts."},
+        answer = await llm.chat(model, [{"role": "system", "content": "Respond in English as short plain-text sentences without Markdown syntax. Never invent facts. Separate coverage, current status, repair options and next action."},
                                        {"role": "user", "content": prompt}])
         steps.append({"step": "llm_summary", "status": "ok", "model": model, "transport": answer["transport"]})
         return {"answer": answer["content"], "model": model, "steps": steps,
@@ -166,3 +194,51 @@ async def guided_run(request: AssistantRequest):
     except (MCPError, GatewayError) as exc:
         steps.append({"step": "error", "status": "error", "detail": str(exc)})
         raise HTTPException(status_code=502, detail={"message": str(exc), "steps": steps}) from exc
+
+
+class FallbackProbeRequest(BaseModel):
+    prompt: str = Field(default="Reply with exactly: fallback probe successful", max_length=300)
+
+@app.post("/api/demo/live-fallback-probe")
+async def live_fallback_probe(request: FallbackProbeRequest):
+    """REAL NAI request against an isolated lab Unified Endpoint; never injects errors."""
+    import os
+    if settings.mock_llm or settings.demo_mode.lower() != "live":
+        raise HTTPException(status_code=409, detail="Live mode required. Rehearsal is not a fallback test.")
+    if os.getenv("ENABLE_LIVE_FALLBACK_TEST", "false").lower() != "true":
+        raise HTTPException(status_code=403, detail="Set ENABLE_LIVE_FALLBACK_TEST=true on an isolated demo environment.")
+    url = os.getenv("NAI_FALLBACK_TEST_URL", "").strip()
+    key = os.getenv("NAI_FALLBACK_TEST_KEY", "").strip()
+    name = os.getenv("NAI_FALLBACK_TEST_MODEL", "").strip()
+    if not all((url, key, name)) or not url.startswith("https://"):
+        raise HTTPException(status_code=422, detail="Dedicated HTTPS test URL, key and model must be configured.")
+    import httpx
+    request_url = url.rstrip("/")
+    if not request_url.endswith("/chat/completions"):
+        request_url += "/chat/completions"
+    try:
+        # TLS verification remains on by default. Only disable in an explicitly approved, isolated test environment.
+        verify_tls = os.getenv("NAI_FALLBACK_TEST_TLS_VERIFY", "true").lower() != "false"
+        async with httpx.AsyncClient(timeout=90, follow_redirects=False, verify=verify_tls) as client:
+            response = await client.post(request_url, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": name, "messages": [{"role": "user", "content": request.prompt}], "temperature": 0})
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
+        if response.status_code >= 400:
+            return {"success": False, "http_status": response.status_code,
+                    "error": str(payload.get("error", {}).get("message", "NAI returned an error"))[:240],
+                    "gateway_request": True, "fallback_verified": False}
+        usage = normalize_probe_usage(payload)
+        return {"success": True, "http_status": response.status_code,
+                "reported_model": payload.get("model"), "usage": usage,
+                "gateway_request": True, "fallback_verified": False,
+                "note": "Model is reported by the response. Verify actual routing in NAI audit/telemetry."}
+    except httpx.HTTPError as exc:
+        return {"success": False, "http_status": None, "error": type(exc).__name__,
+                "gateway_request": False, "fallback_verified": False}
+
+def normalize_probe_usage(data: dict[str, Any]) -> dict[str, int]:
+    usage = data.get("usage") or {}
+    return {k: int(usage.get(k) or 0) for k in ("prompt_tokens", "completion_tokens", "total_tokens")}

@@ -55,7 +55,9 @@ class UnifiedEndpointClient:
         headers = {"Authorization": f"Bearer {self.cfg.nai_key}", "Content-Type": "application/json"}
         payload = {"model": model, "messages": messages, "temperature": temperature}
         try:
-            async with httpx.AsyncClient(timeout=90) as client:
+            # TLS verification is controlled by TLS_VERIFY and is enabled by default.
+            # Only disable it for an explicitly approved, isolated test environment.
+            async with httpx.AsyncClient(timeout=90, verify=self.cfg.tls_verify) as client:
                 response = await client.post(url, headers=headers, json=payload)
                 response.raise_for_status()
                 data = response.json()
@@ -97,7 +99,7 @@ class UnifiedEndpointClient:
     def _mock_chat(model: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
         last = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
         content = (
-            f"[MOCK / {model}] Your request was received. In live mode, this response "
+            f"[Rehearsal / {model}] Your request was received. In live mode, this response "
             "is generated through the NAI Unified Endpoint, which may route to "
             "OpenAI, Claude, or a private model.\n\n"
             f"Request: {str(last)[:500]}"
@@ -116,7 +118,7 @@ class UnifiedEndpointClient:
             "resolved_model": model,
             "reported_model": None,
             "endpoint_name": None,
-            "transport": "mock",
+            "transport": "rehearsal",
             "usage": usage,
             "usage_source": "local-estimate",
         }

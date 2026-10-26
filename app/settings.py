@@ -8,14 +8,14 @@ def env(name: str, default: str = "") -> str:
 
 @dataclass
 class Settings:
-    demo_mode: str = env("DEMO_MODE", "live")
+    demo_mode: str = env("DEMO_MODE", "rehearsal")
     nai_url: str = env("NAI_UNIFIED_ENDPOINT_URL")
     nai_endpoint_name: str = env("NAI_UNIFIED_ENDPOINT_NAME")
     nai_key: str = env("NAI_API_KEY")
     mcp_url: str = env("MCP_URL", "http://mcp-mock:8001/mcp")
     mcp_key: str = env("MCP_API_KEY")
     mcp_protocol_version: str = env("MCP_PROTOCOL_VERSION", "2025-06-18")
-    # Lab-only workaround for an hPOC certificate/hostname mismatch. Keep true in production.
+    # TLS verification is enabled by default for Live and Rehearsal connections.
     # TLS_VERIFY applies to both the Unified Endpoint and MCP. MCP_TLS_VERIFY remains
     # as a backwards-compatible fallback for older .env files.
     tls_verify: bool = env("TLS_VERIFY", env("MCP_TLS_VERIFY", "true")).lower() not in {"0", "false", "no", "off"}

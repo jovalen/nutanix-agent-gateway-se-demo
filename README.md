@@ -1,721 +1,315 @@
-# Nutanix Agent Gateway — SeguroAuto Insurance AI Demo
+# Nutanix Agent Gateway — SeguroAuto Demo
 
-## Overview
+SeguroAuto is a realistic insurance experience that demonstrates how **Nutanix Agent Gateway** can provide a consistent, governed access layer for AI applications.
 
-SeguroAuto is a fictional insurance web application built to demonstrate, through a realistic business scenario, how **Nutanix Agent Gateway** helps govern AI model access, token consumption, MCP tools, and sensitive business operations.
+The demo brings together:
 
-The demo also shows how Agent Gateway simplifies the work of **Forward Deployed Engineering and Development teams** through a **Unified Endpoint** that abstracts access to public and private AI models. These can include models from OpenAI, Mistral, Google Gemini, Anthropic, and Azure, alongside private models deployed on **Nutanix Enterprise AI (NAI)**.
+- **Unified Endpoint access** for model flexibility and a single application integration.
+- **MCP Connector governance** for controlled access to insurance business tools.
+- **Usage visibility** for request and token information returned by the gateway.
+- **Resilience validation** through a dedicated fallback test workflow.
+- **Business safeguards** for sensitive operations such as claim payouts.
 
-Teams can adjust model routing, access policies, high availability, and fallback configurations without rewriting application integrations or changing API schemas, provided the selected models support the endpoint's interface and required features.
+All sample records are fictional and all business actions are controlled demonstration workflows. This makes the repository safe to run while keeping the enterprise architecture and user experience realistic.
 
-For end users, SeguroAuto supports everyday insurance workflows such as checking a policy, reviewing a claim, and finding a repair shop. For **Systems Engineers**, the app offers technical views that reveal how requests flow through the Unified Endpoint and how MCP Connectors provide governed access to business tools.
+## What the demo shows
 
-> **Demo environment:** SeguroAuto uses fictional data and simulated business operations. It is designed to illustrate enterprise AI architecture and controls, not to process real insurance claims or payouts.
-
-## Demo Objectives
-
-The demo addresses five questions organizations face as they deploy AI applications and agents. Each connects to stakeholders who may own or influence the problem.
-
-### 1. Model Access and Flexibility
-
-**Personas** — CTO, AI Architect, Development Lead, AI Platform Engineer
-
-How can we use OpenAI, Claude, and private AI models from our applications without integrating and maintaining every provider separately?
-
-### 2. Token Consumption and Cost Control
-
-**Personas** — FinOps, AI Platform Owner, IT Operations
-
-How can we set token consumption limits and prevent an AI application or agent from creating unexpected costs?
-
-### 3. Availability and Resilience
-
-**Personas** — Platform Engineering, SRE, Infrastructure Architect
-
-What happens if an AI provider is overloaded, reaches its limits, or becomes unavailable? How do we keep the application running without changing its code?
-
-### 4. Security and Tool Access
-
-**Personas** — CISO, Security Architect, AI Architect, Application Owner
-
-How can an AI agent retrieve enterprise information and execute business operations without receiving excessive privileges?
-
-### 5. Visibility, Traceability, and Governance
-
-**Personas** — IT Operations, Security Operations, Compliance, AI Platform Owner
-
-How can we identify which user or application initiated a request, which model handled it, which tools were invoked, and which operations were performed?
-
-**What the demo demonstrates:** Nutanix Agent Gateway combines a model-facing **Unified Endpoint** with governed access to tools through **Model Context Protocol (MCP)**. The goal is to show how teams can bring AI applications into production while maintaining control over model access, usage, availability, and interactions with enterprise systems.
-
-## Insurance Workflows and MCP Tools
-
-The demo uses a dedicated MCP server exposing five tools that represent common insurance operations.
-
-| Tool | Description | Demonstration focus |
+| Capability | SeguroAuto experience | Platform discussion |
 |---|---|---|
-| `get_customer_policy` | Retrieve a customer's policy details | Read-only access |
-| `get_claim_status` | Check the status of an insurance claim | Read-only access |
-| `find_repair_shops` | Find repair shops | Tool invocation and results |
-| `create_claim` | Create a new insurance claim | Audited write operation |
-| `approve_claim_payout` | Approve an insurance claim payout | Restricted sensitive operation |
+| Unified model access | One application integration | Route requests through a configured NAI Unified Endpoint |
+| Governed business tools | Policy, claim and repair-shop workflows | Publish and control tools through an NAI MCP Connector |
+| Least privilege | Payout approval requires human authorization | Separate read, write and sensitive operations |
+| Usage visibility | Gateway monitor in the application | Review usage and routing evidence in NAI |
+| Availability | Baseline and post-fault probes | Validate fallback on a dedicated test endpoint |
 
-This makes the distinction between reading data and taking actions concrete. Checking a claim does not require the same permissions as approving a payout. **Gateway tool filtering is not a substitute for business-level authorization**; any real payout workflow must enforce authorization and, where applicable, human approval in the destination system.
+## Demo story
 
-## Deployment Modes
+The customer asks about a policy or claim. SeguroAuto retrieves the relevant information through MCP, then uses the Unified Endpoint to produce a concise answer. The Operations view runs a guided claim-investigation workflow. The Control Room view exposes the platform signals that matter to engineering and operations teams.
 
-| Mode | AI responses | MCP tools | Intended use |
-|---|---|---|---|
-| **Live** | NAI Unified Endpoint using configured providers | Local MCP Server deployed inside NAI 2.7, accessed through the NAI MCP Connector | Customer and partner demonstrations with real platform controls |
-| **Rehearsal** | Deterministic mock responses | Local mock MCP server started by Docker Compose | Development, testing, and practicing without hPOC access |
-
-In **Live** mode, the application connects to the **NAI MCP Connector**, not a mock server on the presenter's laptop. In **Rehearsal**, Docker Compose provides a self-contained local environment; its token estimates, model responses, and controls must not be presented as measurements or enforcement by NAI.
-
-## How to Position the Demo with Customers
-
-The presentation should follow the customer's challenge, not necessarily every available demo feature.
-
-| Stakeholder | Recommended focus |
-|---|---|
-| **CTO / AI Architect** | Provider independence, hybrid architectures, unified model access |
-| **Development Lead / FDE** | Simpler integrations, fewer code changes, easier model access |
-| **Platform Engineering / SRE** | Availability, fallback, resilience, consumption control |
-| **FinOps / AI Platform Owner** | Token limits, usage policies, cost control |
-| **CISO / Security Architect** | MCP tool restrictions, least privilege, sensitive operations |
-| **IT Operations / Compliance** | Auditability and visibility into AI interactions |
-
-Start with the end-user insurance experience, then switch to the technical views to connect the observed behavior to Unified Endpoint routing, token usage, and MCP tool access. Use `approve_claim_payout` as a discussion point for authorization boundaries rather than implying that a model can approve financial transfers on its own.
+The payout scenario illustrates a clear control boundary: the application does not approve or execute a payout. It presents the next step for human authorization, while the MCP Connector configuration should exclude sensitive payout tools unless the destination workflow provides its own authorization and audit controls.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    U[SeguroAuto Customer\nWeb browser] --> APP[SeguroAuto Web App\nFastAPI + frontend]
-
-    APP -->|Chat-compatible API\nvirtual endpoint key| UEP[NAI Unified Endpoint\nAgent Gateway]
-
-    UEP -->|Provider route| OAI[OpenAI]
-    UEP -->|Provider route| CLAUDE[Anthropic / Claude]
-    UEP -->|Private route| NAI[Private model\nNutanix Enterprise AI]
-
-    APP -->|MCP Connector URL + virtual key| MCPG[NAI MCP Connector\nAgent Gateway]
-    MCPG -->|Internal deployment + tool filtering| MCP[SeguroAuto MCP Server\nLocal MCP in NAI 2.7]
-
-    MCP --> POLICY[Policies]
-    MCP --> CLAIMS[Claims]
-    MCP --> REPAIR[Repair shops]
-    MCP --> PAY[Claim payout\nBlocked / human approval]
-
-    UEP -.-> OBS[Rate limiting\nTokens · routing · fallback\nobservability]
-    MCPG -.-> AUDIT[Tool filtering\naudit · policies]
+    U[SeguroAuto web experience] --> APP[FastAPI application]
+    APP -->|Chat Completions-compatible API| UE[NAI Unified Endpoint]
+    UE --> P1[Configured model providers]
+    UE --> P2[Private models on Nutanix Enterprise AI]
+    APP -->|MCP + virtual key| MC[NAI MCP Connector]
+    MC -->|Governed tools| MS[SeguroAuto MCP Server]
+    MS --> DATA[Policies · claims · repair shops]
+    APP -.-> OBS[Usage and request visibility]
+    MC -.-> AUDIT[Tool policy and audit]
 ```
 
-### Simplified Flow
+### Request flow
 
 ```mermaid
 sequenceDiagram
     participant C as Customer
     participant A as SeguroAuto
-    participant G as NAI Unified Endpoint
     participant M as MCP Connector
-    participant S as SeguroAuto MCP
+    participant S as MCP Server
+    participant G as Unified Endpoint
 
-    C->>A: What is the status of my claim?
-    A->>M: get_claim_status
-    M->>S: Allowed tool
-    S-->>M: Claim status
-    M-->>A: MCP result
-    A->>G: Summarize the response
-    G-->>A: OpenAI, Claude, or private model
-    A-->>C: Clear, traceable response
-
-    C->>A: I want to approve my claim payout
-    A->>M: approve_claim_payout
-    M-->>A: Tool unavailable / denied by policy
-    A-->>C: Human review required
+    C->>A: Ask about policy or claim
+    A->>M: Request an allowed tool
+    M->>S: Governed MCP call
+    S-->>M: Business result
+    M-->>A: Tool result
+    A->>G: Summarize grounded result
+    G-->>A: Model response
+    A-->>C: Clear customer answer
 ```
 
-## Repository Components
+## Business workflows and tools
 
-```text
-nutanix-agent-gateway-se-demo/
-├── app/
-│   ├── main.py                 FastAPI endpoints and business logic
-│   ├── gateway.py              OpenAI-compatible client for NAI
-│   ├── mcp.py                  MCP JSON-RPC client
-│   ├── settings.py             Environment-based configuration
-│   └── static/
-│       ├── index.html          SeguroAuto portal and Control Room
-│       ├── styles.css          Responsive UI styling
-│       └── app.js              Interactions, chat, and token monitor
-├── mock_mcp/
-│   └── server.py               Mock MCP server for policies and claims
-├── docker-compose.yml          Starts web app + mock MCP for local rehearsal
-├── Dockerfile                  Reproducible container image
-├── requirements.txt            Python dependencies
-├── .env.example                Configuration template without secrets
-└── README.md                   This guide
-```
+| Tool | Purpose | Access pattern |
+|---|---|---|
+| `get_customer_policy` | Retrieve policy and coverage details | Read-only |
+| `get_claim_status` | Retrieve claim status and next steps | Read-only |
+| `find_repair_shops` | Find repair options | Read-only |
+| `create_claim` | Register a new claim | Controlled write |
+| `approve_claim_payout` | Sensitive payout operation | Restricted; human authorization required |
 
-## Installation on macOS or Windows
+The local rehearsal MCP service publishes the read and controlled-write tools. The payout operation remains protected by the application guard and should be excluded from the connector allowlist unless a separate authorized business workflow is configured.
+
+## Run locally in Rehearsal mode
+
+Rehearsal mode is the fastest way to explore the experience and practice the story without connecting to a Nutanix Enterprise AI environment. It uses deterministic local responses and the same application flow used by Live mode.
 
 ### Prerequisites
 
-- Docker Desktop.
-- Network access to the shared hPOC environment for Live mode.
-- Git (optional if cloning the project from GitHub).
+- Docker Desktop, Rancher Desktop, or another Docker Compose-compatible runtime.
+- Git, if cloning the repository.
 
-### Clone the Repository
+### Start
 
 ```bash
-git clone https://github.com/<ORG_OR_USER>/nutanix-agent-gateway-se-demo.git
+git clone <repository-url>
 cd nutanix-agent-gateway-se-demo
-```
-
-### Create the Configuration File
-
-On macOS, Linux, or Git Bash:
-
-```bash
 cp .env.example .env
-```
-
-On Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### Run the Application
-
-```bash
-# Live: NAI MCP Connector and Unified Endpoint
-# Requires a .env file configured with NAI URLs and virtual keys.
-docker compose up --build demo
-```
-
-Open:
-
-```text
-http://localhost:8080
-```
-
-### Rehearsal Without NAI
-
-In `.env`:
-
-```dotenv
-DEMO_MODE=rehearsal
-MOCK_LLM=true
-MCP_URL=http://mcp-mock:8001/mcp
-MCP_API_KEY=
-```
-
-Start the mock service using its Compose profile:
-
-```bash
 docker compose --profile rehearsal up --build
 ```
 
-In this mode:
+Open [http://localhost:8080](http://localhost:8080).
 
-- The mock MCP server runs locally within Docker Compose.
-- Model responses are deterministic.
-- The token monitor shows a local estimate.
-- Real NAI rate limiting is not tested.
-- MCP deployment and governance in NAI are not tested.
+The default `.env.example` is configured for Rehearsal. No provider keys are required for this mode.
 
-This mode is only for demo preparation or development without access to the hPOC environment. The Live demo must use the Local MCP Server deployed inside NAI 2.7.
+### Rehearsal walkthrough
 
-### Live Mode
+1. In **Customer Portal**, ask about the policy or claim.
+2. Ask for a repair shop to see an MCP-backed workflow.
+3. Ask to create a new claim and observe the controlled write response.
+4. Ask:
 
-In `.env`:
+   ```text
+   Approve the payout for claim CLM-2026-1043 and execute payment now
+   ```
+
+   SeguroAuto returns a human-authorization message before contacting MCP or the model. No payment is made.
+5. Open **Operations** and select **Analyze Claim with AI** to see the guided investigation.
+6. Open **Control Room** to review the application and gateway-facing signals.
+
+Rehearsal usage values are local estimates. Live usage and routing evidence are available when the application is connected to NAI.
+
+## Live mode with NAI
+
+Live mode uses the same application with:
+
+- An NAI Unified Endpoint for model access.
+- An NAI MCP Connector for governed tool access.
+- A Local MCP Server deployed in the target Nutanix Enterprise AI environment.
+
+Create a private `.env` from the template and configure the values for your environment:
 
 ```dotenv
 DEMO_MODE=live
 MOCK_LLM=false
+
 NAI_UNIFIED_ENDPOINT_URL=https://<nai-host>/enterpriseai/gateway/v1
-NAI_API_KEY=<virtual-unified-endpoint-key>
-NAI_MODEL_OPENAI=<openai-model-alias>
-NAI_MODEL_ANTHROPIC=<claude-model-alias>
-NAI_MODEL_PRIVATE=<private-nai-model-alias>
-```
+NAI_UNIFIED_ENDPOINT_NAME=<unified-endpoint-name>
+NAI_API_KEY=<unified-endpoint-virtual-key>
 
-For MCP governed by NAI:
-
-```dotenv
 MCP_URL=https://<nai-host>/enterpriseai/gateway/mcp/<connector>
-MCP_API_KEY=<virtual-mcp-key>
+MCP_API_KEY=<mcp-connector-virtual-key>
+MCP_PROTOCOL_VERSION=2025-06-18
+TLS_VERIFY=true
 ```
 
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `NAI_UNIFIED_ENDPOINT_URL` | Live | Unified Endpoint URL |
-| `NAI_API_KEY` | Live | Endpoint virtual key |
-| `NAI_MODEL_OPENAI` | Live | OpenAI alias configured in NAI |
-| `NAI_MODEL_ANTHROPIC` | Live | Claude alias configured in NAI |
-| `NAI_MODEL_PRIVATE` | Live | Private-model alias |
-| `MCP_URL` | Always | NAI MCP Connector URL in Live; `http://mcp-mock:8001/mcp` only for Rehearsal |
-| `MCP_API_KEY` | Gateway MCP | MCP Connector virtual key |
-| `MOCK_LLM` | No | Set to `true` for local Rehearsal |
-| `APP_PORT` | No | Local application port |
-
-MCP tool names can also be customized using `MCP_POLICY_TOOL`, `MCP_CLAIM_TOOL`, `MCP_REPAIR_TOOL`, `MCP_CREATE_CLAIM_TOOL`, and `MCP_BLOCKED_TOOL`.
-
-## What the Unified Endpoint Does
-
-The application does not need to know whether OpenAI, Claude, or a private model generates the response. It calls a single Chat Completions-compatible API:
-
-```text
-POST {NAI_UNIFIED_ENDPOINT_URL}/chat/completions
-Authorization: Bearer {NAI_API_KEY}
-```
-
-The model name sent by the application corresponds to an alias configured in NAI. Only the alias or virtual key needs to change; the agent integration code remains the same.
-
-The Unified Endpoint can centralize:
-
-- Provider credentials.
-- Routing across external and private endpoints.
-- Fallback when an endpoint fails or reaches a limit.
-- Weighted load balancing.
-- Global and per-API-key rate limiting.
-- Observability for tokens, errors, and usage.
-
-## Token Monitor
-
-The `UNIFIED ENDPOINT` monitor appears in the bottom-right corner of the application.
-
-It displays:
-
-- Input tokens.
-- Output tokens.
-- Cumulative total tokens.
-- Number of requests made.
-- Current model or alias.
-- Whether the data comes from NAI or is a local estimate.
-
-In Live mode, the backend normalizes the `usage` object returned by the Unified Endpoint:
-
-```json
-{
-  "prompt_tokens": 120,
-  "completion_tokens": 85,
-  "total_tokens": 205
-}
-```
-
-In Rehearsal mode, the monitor displays a clearly labeled local estimate. This is useful for practicing the demo without real credentials, but must not be presented as token usage measured by NAI.
-
-## DEV and PROD Environments
-
-To demonstrate rate limiting, we use two Gateway configurations rather than two versions of the application.
-
-| Aspect | DEV | PROD |
-|---|---|---|
-| Unified Endpoint | `seguroauto-dev` | `seguroauto-prod` |
-| API key | Development virtual key | Production virtual key |
-| Providers | OpenAI, Claude, and private | Approved providers only |
-| Rate limiting | Intentionally low to trigger the limit | Business-defined budget |
-| MCP | Test tools | Minimal, audited allowlist |
-| Claim payouts | Blocked | Blocked or subject to human approval |
-| Fallback | Visible during the demo | Configured for service continuity |
-| Data | Fictional | Data approved for the environment |
-
-The application itself must be identical in both environments. Only the following configuration changes:
-
-```dotenv
-NAI_UNIFIED_ENDPOINT_URL=...
-NAI_API_KEY=...
-MCP_URL=...
-MCP_API_KEY=...
-```
-
-## NAI Setup
-
-Exact labels may vary depending on the version and hPOC environment, but the conceptual setup sequence is as follows.
-
-### 1. Create Providers
-
-In **Agent Gateway > Providers**:
-
-- Create the OpenAI provider.
-- Store the OpenAI API key in the NAI vault.
-- Create the Anthropic provider.
-- Store the Claude API key in the NAI vault.
-- Register the private Nutanix Enterprise AI endpoint.
-
-OpenAI and Anthropic API keys must never reach the browser or be stored in the repository.
-
-### 2. Create Unified Endpoints
-
-Create two endpoints:
-
-```text
-seguroauto-dev
-seguroauto-prod
-```
-
-Each endpoint should include the aliases you want to demonstrate:
-
-```text
-openai-seguroauto
-claude-seguroauto
-private-seguroauto
-```
-
-Configure the following as appropriate for each environment:
-
-- Primary provider.
-- Fallback.
-- Weighted load balancing.
-- Token limits.
-- Virtual API keys.
-
-### 3. Create Virtual API Keys
-
-Create a different key for each environment. For more granular attribution, consider one key per application or agent.
-
-For example:
-
-```text
-seguroauto-dev-agent
-seguroauto-prod-agent
-```
-
-The application only knows the NAI virtual key. It does not have access to OpenAI, Claude, or private-model provider credentials.
-
-### 4. Configure Rate Limiting
-
-Configure two levels of limits:
-
-- **Global Unified Endpoint limit** — Protects the entire endpoint, the provider contract, or cluster capacity.
-- **Granular per-API-key limit** — Prevents one application, user, or agent from consuming the entire budget.
-
-For the demo:
-
-1. Set an intentionally low limit in DEV.
-2. Run several queries from SeguroAuto.
-3. Show the token counter increasing.
-4. Trigger the limit.
-5. Show the response returned by NAI and the corresponding metric.
-6. Switch to PROD and repeat with a different policy.
-
-Do not simulate rate limiting in the frontend. The goal is to demonstrate an actual rate-limit response from NAI.
-
-### 5. Deploy the Local MCP Server in NAI 2.7
-
-The intended deployment workflow is to publish the mock server image to a registry accessible by the cluster, then deploy it using **Deploy Local MCP Server** in NAI.
-
-#### Publish the Image to GHCR
-
-From the repository root:
+Start the application:
 
 ```bash
-docker login ghcr.io
-docker build -f mock_mcp/Dockerfile \
-  -t ghcr.io/<ORG_OR_USER>/seguroauto-mcp:mcp-v0.2.0 .
-docker push ghcr.io/<ORG_OR_USER>/seguroauto-mcp:mcp-v0.2.0
+docker compose up --build
 ```
 
-Alternatively, create and push the tag to trigger the included workflow:
+Then open [http://localhost:8080](http://localhost:8080). Keep provider credentials and virtual keys in NAI or the local environment; they are never sent to the browser.
+
+### Configuration reference
+
+| Variable | Purpose |
+|---|---|
+| `DEMO_MODE` | `rehearsal` or `live` |
+| `MOCK_LLM` | Enables deterministic local responses in Rehearsal |
+| `NAI_UNIFIED_ENDPOINT_URL` | NAI Unified Endpoint transport URL |
+| `NAI_UNIFIED_ENDPOINT_NAME` | Endpoint name/alias sent to NAI |
+| `NAI_API_KEY` | Virtual key for the Unified Endpoint |
+| `MCP_URL` | NAI MCP Connector URL in Live; local MCP URL in Rehearsal |
+| `MCP_API_KEY` | Virtual key for the MCP Connector |
+| `MCP_PROTOCOL_VERSION` | MCP protocol version negotiated with the server |
+| `TLS_VERIFY` | TLS certificate verification; enabled by default |
+| `ENABLE_LIVE_FALLBACK_TEST` | Enables the dedicated fallback probe |
+| `NAI_FALLBACK_TEST_URL` | Dedicated test Unified Endpoint URL |
+| `NAI_FALLBACK_TEST_KEY` | Dedicated test virtual key |
+| `NAI_FALLBACK_TEST_MODEL` | Dedicated test endpoint name |
+| `NAI_FALLBACK_TEST_TLS_VERIFY` | TLS verification for the dedicated probe |
+
+## Unified Endpoint and usage visibility
+
+The application sends a Chat Completions-compatible request to one configured Unified Endpoint. The endpoint configuration determines the model routes and policies behind that integration. The application does not need a separate provider-specific integration for each route.
+
+The floating gateway monitor shows:
+
+- Input, output and total token values returned by the backend.
+- Request count for the current browser session.
+- The configured endpoint name.
+- The reported model identifier, when present in the response.
+- Whether the displayed usage is gateway-reported or a local Rehearsal estimate.
+
+A response model identifier is useful context. Confirm provider routing, fallback and policy events in NAI telemetry when those facts matter to the demonstration.
+
+## Fallback validation
+
+The Control Room provides two actions:
+
+1. **Capture baseline** — sends a real request through a dedicated test Unified Endpoint.
+2. **Probe after upstream fault** — sends the same request after the primary test target has been placed into an approved fault condition.
+
+The browser does not alter provider configuration or manufacture a fallback result. The validation sequence is:
+
+1. Configure a dedicated Unified Endpoint with at least two targets and the desired fallback order.
+2. Capture a successful baseline.
+3. Introduce an approved `429` or `503` condition on the isolated primary target.
+4. Run the second probe.
+5. Confirm the primary error and secondary route in NAI routing events, audit records or metrics.
+6. Restore the primary target and run a recovery probe.
+
+A successful response after the primary failure is the user-visible result. NAI routing telemetry provides the authoritative evidence that the secondary target handled the request.
+
+### Optional controlled fault-provider lab
+
+The repository includes a small OpenAI-compatible upstream for an isolated fallback exercise. It has two listeners:
+
+| Listener | Default host port | Purpose |
+|---|---:|---|
+| Inference | `8090` | Returns `200`, `429` or `503` from `/v1/chat/completions` |
+| Administration | `8089` | Authenticated local control through `/admin/mode` |
+
+The administration listener is bound to `127.0.0.1` by default. If NAI needs to reach the inference listener, publish only that listener through an approved private HTTPS ingress with valid TLS and suitable network controls. Do not publish the administration endpoint.
+
+Start the lab:
 
 ```bash
-git tag mcp-v0.2.0
-git push origin mcp-v0.2.0
+# Set a strong local FAULT_ADMIN_TOKEN in .env first.
+docker compose -f docker-compose.yml -f compose.fault-lab.yml up --build -d fault-lab
 ```
 
-If the GHCR package is private, create an **Image Registry Credential** in NAI for `ghcr.io` using a token with package-read permission. If the hPOC cannot access GHCR, use the approved internal registry with the corresponding image name and tag.
+Confirm the normal response:
 
-#### Create the Local MCP Server in NAI
+```bash
+curl -s http://127.0.0.1:8090/healthz
+```
 
-In NAI 2.7:
+Set the isolated upstream to return `503`:
 
-1. Add or select the registry credential.
-2. Go to **MCP Servers**.
-3. Select **Deploy Local MCP Server**.
-4. Use this image:
+```bash
+curl -sS -X POST http://127.0.0.1:8089/admin/mode \
+  -H "Authorization: Bearer $FAULT_ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"status":503}'
+```
 
-   ```text
-   ghcr.io/<ORG_OR_USER>/seguroauto-mcp:mcp-v0.2.0
-   ```
+Confirm the inference listener returns the selected status:
 
-5. Configure MCP port `8001` and the MCP protocol required by the hPOC.
-6. Deploy and wait until the server is `Ready`.
-7. Create a **SeguroAuto MCP Connector** pointing to the local server.
-8. Create a dedicated key for that Connector.
+```bash
+curl -i -sS -X POST http://127.0.0.1:8090/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"fault-test-primary","messages":[{"role":"user","content":"health check"}]}'
+```
 
-The server exposes the following tools:
+Restore normal behavior when finished:
 
-| Tool | Purpose | Recommended Policy |
-|---|---|---|
-| `get_customer_policy` | Retrieve policy | Exposed, read-only |
-| `get_claim_status` | Check claim | Exposed, read-only |
-| `find_repair_shops` | Find repair shop | Exposed |
-| `create_claim` | Create claim | Exposed with auditing |
-| `approve_claim_payout` | Approve payout | Do not expose, or require human approval |
+```bash
+curl -sS -X POST http://127.0.0.1:8089/admin/mode \
+  -H "Authorization: Bearer $FAULT_ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"status":200}'
+```
 
-Apply tool filtering in the Connector and expose only the tools required by the SeguroAuto agent. Keep `approve_claim_payout` off the allowlist to demonstrate that the model can understand a payout request while the agent is not granted the ability to execute it.
+Use `429` instead of `503` to exercise rate-limit handling. The local curl confirms the upstream lab behavior. The Control Room probe and NAI telemetry confirm the end-to-end fallback path.
 
-### 6. Configure Auditing
+## Operations view
 
-During the demo, show:
+The Operations view runs a predefined, read-only investigation for `CLM-2026-1043`:
 
-- Which virtual key initiated the request.
-- Which model generated the response.
-- How many tokens were used.
-- Which MCP tool was invoked.
-- Which tool was denied.
-- Which user or application initiated the operation.
+1. Retrieve policy and coverage.
+2. Retrieve claim status and next steps.
+3. Find repair options.
+4. Summarize the evidence through the Unified Endpoint.
+5. Present the result for human review.
 
-## Local MCP Server Inside NAI 2.7
+This guided workflow keeps the story predictable while showing how MCP data and model summarization work together.
 
-This demo uses MCP local deployment within NAI as its primary scenario:
+## Security and safe defaults
+
+- Provider and virtual-key credentials stay server-side.
+- TLS verification is enabled by default.
+- Payout approval is guarded before any MCP or model request.
+- The local fault-lab administration port is localhost-only by default.
+- `.env`, bytecode, editor files and runtime state are excluded by `.gitignore`.
+- Use dedicated test endpoints and keys for resilience validation.
+- Review sensitive-operation authorization in the destination business system; gateway tool filtering complements, but does not replace, business authorization.
+
+## Repository layout
 
 ```text
-SeguroAuto on your laptop
-         ↓ HTTPS/API
-NAI Unified Endpoint              NAI MCP Connector
-         ↓                                  ↓
-OpenAI · Claude · Private NAI      Local MCP Server in NAI 2.7
-                                            ↓
-                                  Policies · claims · repair shops
+app/
+  main.py                 FastAPI routes and demo guard
+  gateway.py              Unified Endpoint client
+  mcp.py                  Streamable HTTP MCP client
+  settings.py             Environment-backed configuration
+  static/                 SeguroAuto web experience
+mock_mcp/
+  server.py               Local MCP service for Rehearsal
+fault_provider/
+  server.py               Isolated upstream for fallback exercises
+tests/
+  test_mcp_tool_names.py  MCP naming and handshake coverage
+  test_payout_guard.py    Sensitive-operation guard coverage
+  test_fault_provider.py  Fault-state coverage
+docker-compose.yml        Application and Rehearsal services
+compose.fault-lab.yml     Optional isolated upstream lab
+.env.example              Safe configuration template
 ```
 
-In Live mode, the application does not call `mcp-mock` directly, does not need your laptop's IP address, and does not require Cloudflare Tunnel. The MCP Server runs as a workload managed by NAI, while the Connector provides identity, tool filtering, and auditing.
+## Local validation
 
-Docker Compose retains `mcp-mock` for local Rehearsal:
+Run the tests from the repository root:
 
-```text
-SeguroAuto app → http://mcp-mock:8001/mcp
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 -m compileall -q app mock_mcp fault_provider
 ```
 
-To switch to Live, change only the Connector configuration:
+The test suite covers MCP tool-name resolution, payout precedence, the no-MCP/no-LLM payout guard, claim-creation intent and fault-provider state transitions.
 
-```dotenv
-MCP_URL=https://<nai-host>/enterpriseai/gateway/mcp/<connector>
-MCP_API_KEY=<virtual-mcp-key>
-```
+## Public references
 
-The same application and code work in both cases. What changes is the MCP entry point and the policies applied by NAI—not SeguroAuto's business logic.
+- [Nutanix Enterprise AI](https://www.nutanix.com/products/nutanix-enterprise-ai)
+- [Nutanix Developer API reference](https://www.nutanix.dev/api_reference/apis/nai2.7.html)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
 
-## Complete Demo Walkthrough
+## Branch workflow
 
-### 1 — Customer Experience
-
-1. Open the SeguroAuto portal.
-2. Show the active policy.
-3. Ask:
-
-   ```text
-   What coverage and deductible does my policy include?
-   ```
-
-4. Ask:
-
-   ```text
-   What is the status of my claim?
-   ```
-
-5. Show that the application only knows the NAI endpoint and its associated API key. It always uses an OpenAI-compatible API schema, regardless of which models are part of the Unified Endpoint. Depending on the routing configuration, requests may be sent to different model endpoints, including when weighted routing is enabled.
-
-### 2 — MCP and Business Operations
-
-1. Select **Find a Repair Shop**.
-2. Show `find_repair_shops` in the audit trail.
-3. Open the **Operations** view.
-4. Run the full customer journey.
-5. Explain how the agent combines policy, claim, and repair-shop information through MCP.
-
-Suggested talking point:
-
-> The application does not need a separate API integration for every business system. The agent is given governed tools, and the Gateway controls which ones it can access.
-
-### 3 — Unauthorized Operation
-
-1. Ask:
-
-   ```text
-   I want to approve the payout for my claim.
-   ```
-
-2. Show that the agent understands the request.
-3. Show that `approve_claim_payout` cannot be executed.
-4. Show the blocked-action record.
-5. Confirm that no payment was made.
-
-Suggested talking point:
-
-> The model can understand the intent, but the Gateway policy—not the model—determines whether the tool is available. Business-level authorization remains the responsibility of the underlying system.
-
-### 4 — Unified Endpoint
-
-1. Run a query.
-2. Show the model alias and token counter.
-3. In NAI, open the Unified Endpoint and remove one of the configured models, such as OpenAI, Claude, or the local endpoint.
-4. Repeat the same query without changing the application code.
-5. Switch to Claude.
-6. Explain that the user-facing application experience remains unchanged.
-
-Suggested talking point:
-
-> We changed the provider and the route, but we did not change the agent or the application.
-
-### 5 — Rate Limiting
-
-**Approximate duration — 3 minutes**
-
-1. Open the DEV configuration in NAI.
-2. Show the global limit and API-key-level limit.
-3. Run several requests from SeguroAuto.
-4. Watch the token monitor increase.
-5. Reach the configured limit.
-6. Show the rate-limit response.
-7. Open the NAI metrics.
-8. Switch to the PROD configuration.
-9. Repeat and compare the behavior.
-
-The goal is to show that consumption can be controlled before it becomes an unexpected cost.
-
-### 6 — Fallback
-
-**Approximate duration — 2 minutes**
-
-1. Configure OpenAI as the primary route.
-2. Configure Claude as the fallback.
-3. Configure the private model as the final fallback.
-4. Simulate a `429` or `503` response from the primary provider.
-5. Repeat the query.
-6. Show that the application continues working and that the route changes in NAI.
-
-## Tailoring the Demo to Each Persona
-
-### Infrastructure Manager
-
-Emphasize:
-
-- Service availability.
-- Protection of private cluster capacity.
-- Fallback when a provider fails.
-- Weighted load balancing.
-- Consumption control across GPUs and cloud providers.
-- Separation of DEV and PROD.
-- No exposure of master provider credentials.
-
-Question to answer:
-
-> How do I keep the application available while controlling where inference runs?
-
-### Dev/Ops Manager
-
-Emphasize:
-
-- A stable API for the agent.
-- No integration rewrite when switching models.
-- Per-application or per-agent rate limiting.
-- Virtual keys and traceability.
-- MCP tool allowlists.
-- Blocking sensitive actions.
-- Audit evidence.
-
-Question to answer:
-
-> How do I make the agent useful without granting excessive permissions or an unlimited budget?
-
-### Business Stakeholder
-
-Emphasize:
-
-- Faster resolution of customer queries.
-- A consistent customer experience.
-- Continuity when a provider fails.
-- Cost control.
-- Separation of automated recommendations from decisions requiring approval.
-
-## Security
-
-- Never commit `.env` to GitHub.
-- Never expose OpenAI or Anthropic API keys in the frontend.
-- Keep provider credentials in the NAI vault.
-- Use separate virtual keys for each environment.
-- Use a dedicated MCP virtual key, separate from the Unified Endpoint virtual key.
-- Apply least privilege to MCP tools.
-- In Live mode, do not connect the laptop's mock server to the hPOC; use the Local MCP Server deployed in NAI 2.7.
-- Use only fictional data in the demo.
-- Keep payout operations and sensitive data changes subject to human approval.
-
-## Troubleshooting
-
-### The Application Opens but Displays `CONFIGURATION ERROR`
-
-In Live mode, check:
-
-- `docker compose up --build demo` completed without errors.
-- `NAI_UNIFIED_ENDPOINT_URL` and `NAI_API_KEY` are correct.
-- `MCP_URL` contains the NAI MCP Connector URL.
-- `MCP_API_KEY` belongs to that Connector.
-
-In Rehearsal mode, check:
-
-- You started with `docker compose --profile rehearsal up --build`.
-- `mcp-mock` is healthy.
-- `MCP_URL=http://mcp-mock:8001/mcp`.
-
-### The Monitor Displays `Local Estimate`
-
-The application is running with `MOCK_LLM=true` or is missing `NAI_API_KEY` and `NAI_UNIFIED_ENDPOINT_URL`. Switch to Live mode to display measured token usage.
-
-### The Model Returns an Error
-
-Check:
-
-- The complete Unified Endpoint URL.
-- A valid virtual key.
-- The exact model alias.
-- Connectivity from Docker Desktop to the hPOC.
-- Provider configuration and credentials in NAI.
-
-### MCP Does Not Respond from NAI
-
-Check the **Local MCP Server** deployment in NAI 2.7:
-
-- The container image is accessible from the configured registry.
-- The Image Registry Credential has read permission.
-- The workload is `Ready`.
-- The configured MCP port is `8001`.
-- The Connector points to the correct Local MCP Server.
-- The virtual key used by the application belongs to the Connector.
-- `MCP_URL` contains the Connector URL, not `http://mcp-mock:8001/mcp`.
-
-`http://mcp-mock:8001/mcp` works only for local Rehearsal within Docker Desktop.
-
-### The Rate Limit Is Not Triggered
-
-When rehearsing rate limiting:
-
-- Use a DEV virtual key.
-- Temporarily configure a low limit in NAI.
-- Generate multiple requests from the application.
-- Check metrics and usage in NAI.
-- Do not confuse the visual token counter with the rate limit: the former shows consumption; the latter enforces a policy.
-
-## Included Local Validation
-
-The locally tested workflow includes:
-
-- Policy lookup.
-- Claim status lookup.
-- Repair-shop search.
-- Simulated claim creation.
-- Blocking `approve_claim_payout`.
-- MCP tool discovery.
-- Token-usage response.
-- Visual token monitor.
-
-## Reference Documentation
-
-- [NAI AI Gateway — Unified Endpoints](https://docs.google.com/document/d/1o1HQC2rEka2uVbSzmsWtT__kL77m2iRkI27RFMYriHU)
-- [Nutanix Enterprise AI — SE Field Demo Guide](https://docs.google.com/document/d/1iOFNW9OZK8-9yztoxK6yujg8tvmsOr76dw38x9Lz11I)
-- [Nutanix AI Gateway — Internal Presentation](https://nutanixinc.sharepoint.com/sites/NFLCore/_layouts/15/Doc.aspx?sourcedoc=%7B6C921C1F-D155-4845-B7D8-C4403592D4D3%7D&file=Nutanix_AI%2BGateway.pptx&action=edit&mobileredirect=true&web=1)
+Keep integration and demo changes on `dev` while the Rehearsal walkthrough and, where applicable, the dedicated Live fallback validation are reviewed. Promote the tested change to `main` through the repository's normal pull-request process.

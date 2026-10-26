@@ -5,14 +5,14 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:
-      DEMO_MODE: ${DEMO_MODE:-live}
+      DEMO_MODE: ${DEMO_MODE:-rehearsal}
       NAI_UNIFIED_ENDPOINT_URL: ${NAI_UNIFIED_ENDPOINT_URL:-}
       NAI_API_KEY: ${NAI_API_KEY:-}
       NAI_UNIFIED_ENDPOINT_NAME: ${NAI_UNIFIED_ENDPOINT_NAME:-}
-      MCP_URL: ${MCP_URL:-https://<nai-host>/enterpriseai/gateway/mcp/<connector>}
+      MCP_URL: ${MCP_URL:-http://mcp-mock:8001/mcp}
       MCP_API_KEY: ${MCP_API_KEY:-}
       MCP_PROTOCOL_VERSION: ${MCP_PROTOCOL_VERSION:-2025-06-18}
-      # Lab-only: applies to Unified Endpoint and MCP. Keep true in production.
+      # TLS verification is enabled by default.
       TLS_VERIFY: ${TLS_VERIFY:-true}
       # Backwards compatibility with older .env files.
       MCP_TLS_VERIFY: ${MCP_TLS_VERIFY:-true}
@@ -21,9 +21,14 @@ services:
       MCP_REPAIR_TOOL: ${MCP_REPAIR_TOOL:-find_repair_shops}
       MCP_CREATE_CLAIM_TOOL: ${MCP_CREATE_CLAIM_TOOL:-create_claim}
       MCP_BLOCKED_TOOL: ${MCP_BLOCKED_TOOL:-approve_claim_payout}
-      MOCK_LLM: ${MOCK_LLM:-false}
+      MOCK_LLM: ${MOCK_LLM:-true}
+      ENABLE_LIVE_FALLBACK_TEST: ${ENABLE_LIVE_FALLBACK_TEST:-false}
+      NAI_FALLBACK_TEST_URL: ${NAI_FALLBACK_TEST_URL:-}
+      NAI_FALLBACK_TEST_KEY: ${NAI_FALLBACK_TEST_KEY:-}
+      NAI_FALLBACK_TEST_MODEL: ${NAI_FALLBACK_TEST_MODEL:-}
+      NAI_FALLBACK_TEST_TLS_VERIFY: ${NAI_FALLBACK_TEST_TLS_VERIFY:-true}
 
-  # Rehearsal only. In the live demo, MCP is deployed inside NAI 2.7.
+  # Local Rehearsal service. Live deployments use the NAI MCP Connector.
   mcp-mock:
     profiles: ["rehearsal"]
     build:

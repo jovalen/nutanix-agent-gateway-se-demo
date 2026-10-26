@@ -63,17 +63,6 @@ TOOLS = [
             },
         },
     },
-    {
-        "name": "approve_claim_payout",
-        "description": "Acción sensible: aprobar un pago; requiere revisión humana y está bloqueada en la demo.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "claim_id": {"type": "string"},
-                "amount": {"type": "number"},
-            },
-        },
-    },
 ]
 
 
@@ -227,6 +216,8 @@ async def mcp_rpc(
                 }
             )
         elif name == "approve_claim_payout":
+            # Defensive response for direct calls; the tool is intentionally not
+            # published in tools/list and the application guard runs earlier.
             result = {
                 "isError": True,
                 **text("DENEGADO POR POLÍTICA: aprobar indemnizaciones requiere revisión humana. No se ha ejecutado ningún pago."),
