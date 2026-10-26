@@ -18,7 +18,7 @@ All sample records are fictional and all business actions are controlled demonst
 |---|---|---|
 | Unified model access | One application integration | Route requests through a configured NAI Unified Endpoint |
 | Governed business tools | Policy, claim and repair-shop workflows | Publish and control tools through an NAI MCP Connector |
-| Least privilege | Payout approval requires human authorization | Separate read, write and sensitive operations |
+| Least privilege | Sensitive payout access is explicitly controlled | Separate read, write and sensitive operations |
 | Usage visibility | Gateway monitor in the application | Review usage and routing evidence in NAI |
 | Availability | Baseline and post-fault probes | Validate fallback on a dedicated test endpoint |
 
@@ -26,7 +26,7 @@ All sample records are fictional and all business actions are controlled demonst
 
 The customer asks about a policy or claim. SeguroAuto retrieves the relevant information through MCP, then uses the Unified Endpoint to produce a concise answer. The Operations view runs a guided claim-investigation workflow. The Control Room view exposes the platform signals that matter to engineering and operations teams.
 
-The payout scenario illustrates a clear control boundary: the application does not approve or execute a payout. It presents the next step for human authorization, while the MCP Connector configuration should exclude sensitive payout tools unless the destination workflow provides its own authorization and audit controls.
+The payout scenario illustrates layered control. The MCP Connector determines whether `approve_claim_payout` is exposed. If it is exposed, the application can invoke it by default; an optional application policy can still deny it before invocation. This makes the boundary visible without confusing tool availability with policy enforcement.
 
 ## Architecture
 
@@ -63,6 +63,25 @@ sequenceDiagram
     A-->>C: Clear customer answer
 ```
 
+## Payout control flow
+
+The payout request demonstrates the distinction between **tool exposure**, **tool use**, and **application policy**:
+
+```text
+1. Not exposed:  tools/list → no approve_claim_payout
+                  → requested tool is not invoked
+
+2. Exposed + allowed: tools/list → approve_claim_payout
+                      → tools/call → simulated/real tool result
+
+3. Exposed + app policy: tools/list → approve_claim_payout
+                          → application policy denies before tools/call
+```
+
+The application always checks the current MCP `tools/list` response first. A tool hidden by the Connector is reported as unavailable and is never called. If the Connector exposes the tool, the default application behavior is to invoke it. Set `APP_POLICY_DENY_PAYOUT=true` only when the application itself should enforce an additional local policy; in that case the tool is visible but the application does not call it.
+
+In Rehearsal, `MOCK_MCP_EXPOSE_PAYOUT` controls whether the mock advertises the tool. When advertised, the mock returns a clearly labelled in-memory simulated result; it never reaches a payment system. In Live, exposure and execution are governed by the configured NAI MCP Connector and the destination tool.
+
 ## Business workflows and tools
 
 | Tool | Purpose | Access pattern |
@@ -71,9 +90,9 @@ sequenceDiagram
 | `get_claim_status` | Retrieve claim status and next steps | Read-only |
 | `find_repair_shops` | Find repair options | Read-only |
 | `create_claim` | Register a new claim | Controlled write |
-| `approve_claim_payout` | Sensitive payout operation | Restricted; human authorization required |
+| `approve_claim_payout` | Sensitive payout operation | Expose when the destination authorizes it; optionally protect with application policy |
 
-The local rehearsal MCP service publishes the read and controlled-write tools. The payout operation remains protected by the application guard and should be excluded from the connector allowlist unless a separate authorized business workflow is configured.
+The local Rehearsal MCP service publishes the payout tool by default so the allowed-tool path can be demonstrated. Its result is explicitly simulated and never performs a payment. Set `MOCK_MCP_EXPOSE_PAYOUT=false` to demonstrate Connector-level non-exposure, or set `APP_POLICY_DENY_PAYOUT=true` to demonstrate an application-side policy decision after the tool has been exposed.
 
 ## Run locally in Rehearsal mode
 
@@ -108,9 +127,11 @@ The default `.env.example` is configured for Rehearsal. No provider keys are req
    Approve the payout for claim CLM-2026-1043 and execute payment now
    ```
 
-   SeguroAuto returns a human-authorization message before contacting MCP or the model. No payment is made.
-5. Open **Operations** and select **Analyze Claim with AI** to see the guided investigation.
-6. Open **Control Room** to review the application and gateway-facing signals.
+   With the default Rehearsal settings, the mock exposes the tool and returns a clearly labelled simulated approval. No external payment is made.
+5. To demonstrate Connector-level non-exposure, set `MOCK_MCP_EXPOSE_PAYOUT=false`, recreate the services, and repeat the request. The UI reports that the tool is unavailable and shows that no `tools/call` occurred.
+6. To demonstrate an application-side policy, set `APP_POLICY_DENY_PAYOUT=true`, keep the tool exposed, recreate the application, and repeat the request. The UI reports an application-policy denial and shows that MCP was not invoked.
+7. Open **Operations** and select **Analyze Claim with AI** to see the guided investigation.
+8. Open **Control Room** to review the application and gateway-facing signals.
 
 Rehearsal usage values are local estimates. Live usage and routing evidence are available when the application is connected to NAI.
 
@@ -158,6 +179,8 @@ Then open [http://localhost:8080](http://localhost:8080). Keep provider credenti
 | `MCP_URL` | NAI MCP Connector URL in Live; local MCP URL in Rehearsal |
 | `MCP_API_KEY` | Virtual key for the MCP Connector |
 | `MCP_PROTOCOL_VERSION` | MCP protocol version negotiated with the server |
+| `MOCK_MCP_EXPOSE_PAYOUT` | Rehearsal only: advertise the payout tool when `true` |
+| `APP_POLICY_DENY_PAYOUT` | Application policy: deny an exposed payout tool when `true` |
 | `TLS_VERIFY` | TLS certificate verification; enabled by default |
 | `ENABLE_LIVE_FALLBACK_TEST` | Enables the dedicated fallback probe |
 | `NAI_FALLBACK_TEST_URL` | Dedicated test Unified Endpoint URL |
@@ -265,7 +288,7 @@ This guided workflow keeps the story predictable while showing how MCP data and 
 
 - Provider and virtual-key credentials stay server-side.
 - TLS verification is enabled by default.
-- Payout approval is guarded before any MCP or model request.
+- MCP exposure and application policy are evaluated separately; Rehearsal payout results are explicitly simulated and never reach a payment system.
 - The local fault-lab administration port is localhost-only by default.
 - `.env`, bytecode, editor files and runtime state are excluded by `.gitignore`.
 - Use dedicated test endpoints and keys for resilience validation.
@@ -275,7 +298,7 @@ This guided workflow keeps the story predictable while showing how MCP data and 
 
 ```text
 app/
-  main.py                 FastAPI routes and demo guard
+  main.py                 FastAPI routes and MCP-policy result handling
   gateway.py              Unified Endpoint client
   mcp.py                  Streamable HTTP MCP client
   settings.py             Environment-backed configuration
@@ -286,7 +309,7 @@ fault_provider/
   server.py               Isolated upstream for fallback exercises
 tests/
   test_mcp_tool_names.py  MCP naming and handshake coverage
-  test_payout_guard.py    Sensitive-operation guard coverage
+  test_payout_guard.py    Payout exposure, use and policy coverage
   test_fault_provider.py  Fault-state coverage
 docker-compose.yml        Application and Rehearsal services
 compose.fault-lab.yml     Optional isolated upstream lab
@@ -302,7 +325,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 python3 -m compileall -q app mock_mcp fault_provider
 ```
 
-The test suite covers MCP tool-name resolution, payout precedence, the no-MCP/no-LLM payout guard, claim-creation intent and fault-provider state transitions.
+The test suite covers MCP tool-name resolution, payout exposure and invocation rules, optional application policy, claim-creation intent and fault-provider state transitions.
 
 ## Public references
 

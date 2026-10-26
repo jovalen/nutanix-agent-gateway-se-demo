@@ -65,3 +65,20 @@ class MCPToolNameTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class MCPPolicyDenialTests(unittest.TestCase):
+    def test_json_rpc_tool_denial_is_normalized(self):
+        client = MCPClient(SimpleNamespace())
+        client._tool_aliases = {"approve_claim_payout": "server__approve_claim_payout"}
+        async def denied_request(method, params=None):
+            if method == "tools/list":
+                return {"tools": [{"name": "server__approve_claim_payout"}]}
+            self.assertEqual(method, "tools/call")
+            from app.mcp import MCPToolDenied
+            raise MCPToolDenied("Human authorization is required", code=-32003)
+        client.request = AsyncMock(side_effect=denied_request)
+        result = asyncio.run(client.call_tool("approve_claim_payout"))
+        self.assertTrue(result["isError"])
+        self.assertEqual(result["policy_source"], "nai-mcp-connector")
+        self.assertEqual(result["mcp_error_code"], -32003)
+        self.assertIn("DENIED_BY_POLICY", result["content"][0]["text"])

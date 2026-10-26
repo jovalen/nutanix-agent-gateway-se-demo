@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 """SeguroAuto MCP server using Streamable HTTP sessions.
 
@@ -63,7 +64,30 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "approve_claim_payout",
+        "description": "Aprueba un pago de indemnización en el sistema de demostración.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "claim_id": {"type": "string"},
+                "amount": {"type": "number"},
+            },
+            "required": ["claim_id", "amount"],
+        },
+    },
 ]
+
+
+def payout_exposed() -> bool:
+    """Control Rehearsal-only exposure; Live exposure is managed by NAI."""
+    return os.getenv("MOCK_MCP_EXPOSE_PAYOUT", "true").lower() in {"1", "true", "yes"}
+
+
+def advertised_tools() -> list[dict[str, Any]]:
+    if payout_exposed():
+        return TOOLS
+    return [tool for tool in TOOLS if tool["name"] != "approve_claim_payout"]
 
 
 def text(value: object) -> dict[str, Any]:
@@ -168,7 +192,7 @@ async def mcp_rpc(
 
     if method == "tools/list":
         return JSONResponse(
-            rpc_result(request_id, {"tools": TOOLS}),
+            rpc_result(request_id, {"tools": advertised_tools()}),
             headers=session_headers(session_id),
         )
 
@@ -215,12 +239,17 @@ async def mcp_rpc(
                     "message": "El parte ha sido registrado. Recibirás confirmación por email.",
                 }
             )
-        elif name == "approve_claim_payout":
-            # Defensive response for direct calls; the tool is intentionally not
-            # published in tools/list and the application guard runs earlier.
+        elif name == "approve_claim_payout" and payout_exposed():
+            # Rehearsal executes only an in-memory demonstration operation.
+            # It never reaches a payment system.
             result = {
-                "isError": True,
-                **text("DENEGADO POR POLÍTICA: aprobar indemnizaciones requiere revisión humana. No se ha ejecutado ningún pago."),
+                "isError": False,
+                "operation": "approve_claim_payout",
+                "claim_id": args.get("claim_id", "CLM-2026-1043"),
+                "amount": args.get("amount", 1840),
+                "status": "approved",
+                "execution": "simulated",
+                **text("SIMULATED_PAYMENT_APPROVED: payout approved in Rehearsal; no external payment was made."),
             }
         else:
             return JSONResponse(

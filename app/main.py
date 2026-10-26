@@ -42,7 +42,9 @@ async def config():
             "gateway_configured": bool(settings.nai_url and settings.nai_key and settings.nai_endpoint_name),
             "mcp_configured": bool(settings.mcp_url),
             "endpoint_name": settings.nai_endpoint_name,
-            "models": settings.models, "tools": settings.tools}
+            "models": settings.models, "tools": settings.tools,
+            "payout_policy": {"tool": settings.blocked_tool,
+                              "application_denied": settings.app_policy_deny_payout}}
 
 @app.get("/api/health")
 async def health():
@@ -67,26 +69,31 @@ async def tools():
 
 @app.post("/api/mcp/call")
 async def call_tool(request: ToolRequest):
-    # This API is demonstrative, not an authorized tool-execution endpoint.
-    # In particular, never expose payout approval through it.
-    if request.name == settings.blocked_tool:
-        return {"tool": request.name, "blocked": True,
-                "reason": "Restricted operation. Human approval required.", "result": None}
+    # This API is demonstrative, not an authorized payment endpoint. The
+    # connector allowlist is evaluated first; an exposed tool is usable unless
+    # the optional application policy explicitly denies it.
     try:
         names = {tool.get("name") for tool in await mcp.list_tools()}
         if request.name not in names:
-            return {"tool": request.name, "blocked": True,
-                    "reason": "Tool not permitted by MCP connector", "result": None}
+            return {"tool": request.name, "blocked": True, "tool_invoked": False,
+                    "reason": "This tool is not available through the MCP connector.", "result": None,
+                    "policy_source": "mcp-connector-allowlist"}
+        if request.name == settings.blocked_tool and settings.app_policy_deny_payout:
+            return {"tool": request.name, "blocked": True, "tool_invoked": False,
+                    "reason": "Application policy does not allow payout approval.", "result": None,
+                    "policy_source": "application-policy"}
         result = await mcp.call_tool(request.name, request.arguments)
-        return {"tool": request.name, "result": result, "blocked": bool(result.get("isError"))}
+        return {"tool": request.name, "result": result,
+                "blocked": bool(result.get("isError")), "tool_invoked": True,
+                "policy_source": result.get("policy_source")}
     except MCPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 def choose_tool(message: str) -> tuple[str | None, dict[str, Any]]:
     text = message.casefold()
     # An instruction to execute/authorize an actual payout is distinct from asking
-    # about eligibility, status, or the payout process. Denial is app-side unless
-    # NAI supplies an independently verified policy-denial event.
+    # about eligibility, status, or the payout process. The selected tool is then
+    # evaluated by MCP policy; the application does not manufacture the denial.
     payment_words = r"(?:payout|payment|compensation|indemnizaci[oó]n|pago)"
     authorization_words = r"(?:approve|authorize|authorise|execute|pay|process|release|issue|send|aprobar|autorizar|ejecutar|pagar|paga)"
     authorization = rf"\b{authorization_words}\b"
@@ -114,37 +121,97 @@ def tool_text(result: dict[str, Any]) -> str:
     content = result.get("content", [])
     return "\n".join(item.get("text", str(item)) for item in content) if isinstance(content, list) else str(result)
 
-def blocked_payout_response(request: AssistantRequest) -> dict[str, Any]:
-    """Return the demo guard response without contacting MCP or the LLM."""
-    return {"content": "This payout cannot be approved or executed by the AI assistant. Human authorization is required; no payment was made.",
-            "model_key": request.model_key, "tool": settings.blocked_tool,
-            "tool_invoked": False, "tool_result": None,
-            "blocked": True,
-            "block_reason": "Payout approval requires human authorization. No payout was executed.",
-            "policy_source": "application-demo-guard", "gateway_denial_verified": False,
-            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-            "usage_source": "no-llm-request", "gateway_monitor": None,
-            "view": request.view}
+def app_policy_denied_response(
+    request: AssistantRequest,
+) -> dict[str, Any]:
+    denial = "Application policy does not allow payout approval. No payment was executed."
+    return {
+        "content": denial,
+        "model_key": request.model_key,
+        "tool": settings.blocked_tool,
+        "tool_invoked": False,
+        "tool_result": None,
+        "blocked": True,
+        "block_reason": denial,
+        "policy_source": "application-policy",
+        "mcp_denial_verified": False,
+        "gateway_denial_verified": False,
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        "usage_source": "no-llm-request",
+        "gateway_monitor": None,
+        "view": request.view,
+    }
+
+def mcp_denied_response(
+    request: AssistantRequest,
+    tool_result: dict[str, Any],
+    policy_source: str,
+) -> dict[str, Any]:
+    """Return the denial produced by MCP without asking the LLM to reinterpret it."""
+    denial = tool_text(tool_result) or "DENIED_BY_POLICY: Human authorization is required. No payout was executed."
+    return {
+        "content": denial,
+        "model_key": request.model_key,
+        "tool": settings.blocked_tool,
+        "tool_invoked": True,
+        "tool_result": tool_result,
+        "blocked": True,
+        "block_reason": denial,
+        "policy_source": policy_source,
+        "mcp_denial_verified": True,
+        "gateway_denial_verified": False,
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        "usage_source": "no-llm-request",
+        "gateway_monitor": None,
+        "view": request.view,
+    }
 
 @app.post("/api/assistant")
 async def assistant(request: AssistantRequest):
     model = settings.nai_endpoint_name or "rehearsal-unified-endpoint"
     selected_tool, arguments = choose_tool(request.message)
-    # Hard guard first: do not even call tools/list for a sensitive operation.
-    if selected_tool == settings.blocked_tool:
-        return blocked_payout_response(request)
     tool_result = None
-    blocked, block_reason = False, None
+    blocked, block_reason, policy_source = False, None, None
     try:
         available = await mcp.list_tools()
         names = {tool.get("name") for tool in available}
         if selected_tool and selected_tool not in names:
             blocked, block_reason = True, "This tool is not available through the MCP connector."
+            policy_source = "mcp-connector-allowlist"
+        elif selected_tool == settings.blocked_tool and settings.app_policy_deny_payout:
+            # The app policy is intentionally separate from MCP exposure. The
+            # tool was exposed, but this application is configured not to use it.
+            return app_policy_denied_response(request)
         elif selected_tool:
             tool_result = await mcp.call_tool(selected_tool, arguments)
             blocked = bool(tool_result.get("isError"))
             if blocked:
-                block_reason = "The MCP tool returned an error; no successful action is confirmed."
+                block_reason = tool_text(tool_result) or "MCP policy denied the operation."
+                policy_source = tool_result.get("policy_source") or "mcp-server-policy"
+
+        # Preserve an MCP denial verbatim; do not ask the LLM to reinterpret it.
+        if selected_tool == settings.blocked_tool and tool_result and blocked:
+            return mcp_denied_response(request, tool_result, policy_source or "mcp-server-policy")
+        # A successful sensitive tool call is returned as grounded MCP output.
+        # This avoids asking a model to restate an operation that may have side effects.
+        if selected_tool == settings.blocked_tool and tool_result and not blocked:
+            return {
+                "content": tool_text(tool_result),
+                "model_key": request.model_key,
+                "tool": selected_tool,
+                "tool_invoked": True,
+                "tool_result": tool_result,
+                "blocked": False,
+                "block_reason": None,
+                "policy_source": None,
+                "mcp_denial_verified": False,
+                "gateway_denial_verified": False,
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                "usage_source": "no-llm-request",
+                "gateway_monitor": None,
+                "view": request.view,
+            }
+
         context = ("Operation denied: " + block_reason) if blocked else (
             tool_text(tool_result) if tool_result else "No MCP tool invoked. Do not invent account details.")
         system = ("You are the SeguroAuto virtual assistant. Respond in English, clearly and concisely. "
@@ -156,7 +223,8 @@ async def assistant(request: AssistantRequest):
                                         {"role": "user", "content": request.message}])
         return {**result, "model_key": request.model_key, "tool": selected_tool,
                 "tool_result": tool_result, "tool_invoked": bool(selected_tool and tool_result is not None),
-                "policy_source": "application" if blocked else None,
+                "policy_source": policy_source if blocked else None,
+                "mcp_denial_verified": bool(blocked and tool_result),
                 "gateway_denial_verified": False, "blocked": blocked,
                 "block_reason": block_reason, "view": request.view}
     except (MCPError, GatewayError) as exc:
@@ -221,7 +289,7 @@ async def live_fallback_probe(request: FallbackProbeRequest):
         verify_tls = os.getenv("NAI_FALLBACK_TEST_TLS_VERIFY", "true").lower() != "false"
         async with httpx.AsyncClient(timeout=90, follow_redirects=False, verify=verify_tls) as client:
             response = await client.post(request_url, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                json={"model": name, "messages": [{"role": "user", "content": request.prompt}], "temperature": 0})
+                json={"model": name, "messages": [{"role": "user", "content": request.prompt}], "max_tokens": 128,})
         try:
             payload = response.json()
         except ValueError:

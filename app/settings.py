@@ -24,7 +24,11 @@ class Settings:
     repair_tool: str = env("MCP_REPAIR_TOOL", "find_repair_shops")
     create_claim_tool: str = env("MCP_CREATE_CLAIM_TOOL", "create_claim")
     blocked_tool: str = env("MCP_BLOCKED_TOOL", "approve_claim_payout")
+    # Optional application-side guard. Disabled by default so an exposed tool
+    # is usable; enable it only when the demo should enforce local policy.
+    app_policy_deny_payout: bool = env("APP_POLICY_DENY_PAYOUT", "false").lower() in {"1", "true", "yes"}
     mock_llm: bool = env("MOCK_LLM", "false").lower() in {"1", "true", "yes"}
+    llm_max_tokens: int = int(env("LLM_MAX_TOKENS", "512"))
 
     @property
     def models(self) -> dict[str, str]:
