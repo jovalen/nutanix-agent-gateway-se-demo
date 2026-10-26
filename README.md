@@ -1,4 +1,4 @@
-# Nutanix Agent Gateway — SeguroAuto Demo
+# Nutanix Agent Gateway Demo
 
 SeguroAuto is a fictional online-insurance experience that demonstrates how Nutanix Agent Gateway can provide a consistent, governed access layer for AI applications.
 
