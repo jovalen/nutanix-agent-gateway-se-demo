@@ -147,11 +147,6 @@ Finish by connecting the demo to the customer’s operating model:
 
 > The assistant can help with routine claim questions while the organization retains control over sensitive actions. The experience does not need to expose internal platform complexity to the customer.
 
-### Avoid
-
-* Leading with Kubernetes, TLS settings, or model names.
-* Describing simulated claim data as a production integration.
-* Saying that AI independently authorizes or executes a payment unless a real approved backend is connected.
 
 ## Executive, CTO, or Head of AI
 
@@ -173,12 +168,6 @@ Finish by connecting the demo to the customer’s operating model:
 ### Suggested wording
 
 > The application integrates with a stable enterprise endpoint while the platform team retains freedom to route to different model providers and deployment locations.
-
-### Avoid
-
-* Claiming that changing a model alias alone proves transparent fallback.
-* Presenting an application response as proof of NAI platform telemetry.
-* Treating open model interoperability as equivalent to enterprise support for every model or provider.
 
 ## FDE, Solutions Architect, or Application Development Lead
 
@@ -202,11 +191,6 @@ Finish by connecting the demo to the customer’s operating model:
 
 > The application does not assume that every capability exists. It discovers what the MCP layer exposes, handles unavailable tools explicitly, and allows application policy to add a separate control layer.
 
-### Avoid
-
-* Calling a mock tool a production integration.
-* Hiding whether an action was invoked, simulated, denied, or unavailable.
-* Mixing Rehearsal results with Live NAI evidence.
 
 ## DevOps or Platform Engineering
 
@@ -258,11 +242,6 @@ Finish by connecting the demo to the customer’s operating model:
 
 > The application can exercise the same contract while the infrastructure team validates routing, provider behavior, and failure handling independently. A local fault proves the test harness; NAI telemetry proves platform fallback.
 
-### Avoid
-
-* Calling a local `503` response proof of production failover.
-* Disabling TLS verification in a customer-facing deployment.
-* Claiming availability or recovery objectives that have not been measured.
 
 ## Security, Risk, or Compliance
 
@@ -285,12 +264,6 @@ Finish by connecting the demo to the customer’s operating model:
 ### Suggested wording
 
 > Availability of a tool and authorization to use it are separate decisions. The demo makes both decisions visible instead of hiding them in a generic assistant response.
-
-### Avoid
-
-* Saying that a UI message alone is an audit record.
-* Claiming compliance certification from this demo.
-* Showing secret values, tokens, or private customer information.
 
 ## 5. Payout scenarios
 
@@ -396,12 +369,6 @@ Presenter explanation:
 * The application can display the observed response and correlation information.
 * NAI telemetry can be used to verify whether platform fallback occurred.
 
-### What it cannot prove by itself
-
-* A local fault-provider response alone does not prove that NAI performed a successful fallback.
-* A `200` response alone does not prove which provider served the request.
-* A model name shown in the UI is not a substitute for platform telemetry.
-
 ### Presenter sequence
 
 1. Run a baseline request and record the correlation ID.
@@ -484,19 +451,8 @@ Use precise language:
 * “Fallback was verified” only after confirming it in NAI telemetry.
 * “Simulated” for every Rehearsal result that does not reach a real backend.
 
-Avoid these claims unless independently verified:
-
-* “The AI approved the payment.”
-* “The model automatically failed over.”
-* “The demo proves production resilience.”
-* “The workflow is compliant.”
-* “Every model or provider is supported.”
 
 ## 10. Closing the demo
-
-End with a concrete next step rather than a generic product statement:
-
-> We can take one controlled workflow, map its tools and approval boundaries, connect it to the target enterprise endpoints, and define the telemetry and success criteria for a short proof of value.
 
 Recommended next steps:
 
