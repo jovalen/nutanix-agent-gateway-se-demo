@@ -108,6 +108,12 @@ Rehearsal mode is the fastest way to explore the experience without connecting t
 
 ### Prerequisites
 
+
+* Docker Desktop, Rancher Desktop or another Docker Compose-compatible runtime.
+* Git, if cloning the repository.
+* Port `8080` available for the web application.
+
+### Start
 If you are cloning this repository on **Windows**, you must configure Git to use Linux-style line endings (LF) before cloning. Otherwise, the dev container scripts will fail with a `no such file or directory` error.
 
 Run this command before cloning:
@@ -115,12 +121,6 @@ Run this command before cloning:
 git config --global core.autocrlf false
 
 ```
-
-* Docker Desktop, Rancher Desktop or another Docker Compose-compatible runtime.
-* Git, if cloning the repository.
-* Port `8080` available for the web application.
-
-### Start
 
 ```bash
 git clone https://github.com/jovalen/nutanix-agent-gateway-se-demo.git
