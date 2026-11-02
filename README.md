@@ -123,7 +123,6 @@ Run this command before cloning:
 
 ```bash
 git config --global core.autocrlf false
-```bash
 
 git clone https://github.com/jovalen/nutanix-agent-gateway-se-demo.git
 cd nutanix-agent-gateway-se-demo
