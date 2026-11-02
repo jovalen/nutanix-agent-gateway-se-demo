@@ -114,6 +114,8 @@ Run this command before cloning:
 ```bash
 git config --global core.autocrlf false
 
+```
+
 * Docker Desktop, Rancher Desktop or another Docker Compose-compatible runtime.
 * Git, if cloning the repository.
 * Port `8080` available for the web application.
