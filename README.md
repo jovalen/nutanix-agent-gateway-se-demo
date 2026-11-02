@@ -114,6 +114,8 @@ Rehearsal mode is the fastest way to explore the experience without connecting t
 * Port `8080` available for the web application.
 
 ### Start
+
+#### Note: 
 If you are cloning this repository on **Windows**, you must configure Git to use Linux-style line endings (LF) before cloning. Otherwise, the dev container scripts will fail with a `no such file or directory` error.
 
 Run this command before cloning:
