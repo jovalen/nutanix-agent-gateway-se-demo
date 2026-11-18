@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout incident · Operations desk</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f3;color:#1d302d;font:16px/1.55 "Inter",system-ui,sans-serif}header{background:#153e39;color:white;padding:16px max(6%,calc((100% - 920px)/2));display:flex;justify-content:space-between;white-space:nowrap}main{max-width:960px;margin:42px auto;padding:0 20px}h1{font-size:clamp(32px,5vw,54px);letter-spacing:-.055em;line-height:1.05;margin:16px 0}h2{font-size:20px;margin:0 0 10px}article,details{border:1px solid #cad4cd;background:white;border-radius:14px;padding:22px;margin:16px 0}button{padding:11px 17px;border-radius:7px;border:1px solid #51736d;background:white;color:#16463d;font:inherit;cursor:pointer;margin:4px 6px 4px 0}button.primary{background:#155d4f;color:white}button:disabled{opacity:.5}summary{cursor:pointer;font-weight:650}p{max-width:75ch}.label{color:#52675f;font-size:14px}#status{color:#90412d}ol{padding-left:24px}li{margin:6px 0}blockquote{margin:12px 0;padding-left:14px;border-left:3px solid #98702c}button:focus-visible,summary:focus-visible{outline:3px solid #c07b21}
+</style>
+<header><strong>Operations desk</strong><span>__MODE__</span></header>
+<main><div class="label">Retail operations · Synthetic incident</div><h1>Checkout failures in Madrid</h1>
+<p>Customers are reporting failed purchases. What changed, and what should the service owner do next?</p>
+<button class="primary" id="start">Investigate incident</button><p id="status" role="status"></p>
+<article id="result" hidden><h2>Investigation</h2><p id="finding"></p><div class="label" id="model"></div>
+<button id="approve">Open rollback review</button><button id="brief">Draft customer update</button>
+<div id="communication" hidden><h2>Customer update</h2><p id="message"></p><div class="label" id="writer"></div><details><summary>What the writing model received</summary><blockquote id="shared"></blockquote></details></div></article>
+<details><summary>Presenter tools</summary><p>Replay this incident with a single injected timeout on the first private request.</p>
+<button id="fault">Replay with model failure</button><button id="kv">Compare prefix reuse</button><p id="cache"></p>
+<h2>Execution trace</h2><ol id="trace"></ol></details></main>
+<script>
+const el=id=>document.getElementById(id);
+let caseId="";
+function showTrace(events){
+ el("trace").replaceChildren();
+ for(const e of events){const row=document.createElement("li");
+ row.textContent=e.tool ? e.tool+" · "+e.source : [e.stage,e.route,e.status,e.model,e.fault,e.cached_tokens!=null?"Cached prompt tokens: "+e.cached_tokens:"",e.prompt_tokens!=null?"Prompt tokens: "+e.prompt_tokens:""].filter(Boolean).join(" · ");
+ el("trace").append(row);}
+}
+async function run(path){
+ document.querySelectorAll("button").forEach(b=>b.disabled=true);
+ el("status").textContent="Working…";
+ if(["investigate","fallback"].includes(path)){caseId="";el("result").hidden=true;showTrace([]);}
+ try{
+ const response=await fetch("/"+path,{method:"POST",headers:{"X-Presenter":"__TOKEN__","X-Case":caseId}});
+ const d=await response.json();
+ if(!response.ok){if(d.trace)showTrace(d.trace);throw Error(d.error||"Request failed");}
+ if(path==="cache"){el("cache").textContent="Local single-head attention example · Same output: "+d.same_output+". Cold: "+d.cold_projections+" token positions projected. Warm: "+d.warm_projections+" new position; "+d.prefix_tokens+" cached key/value pairs reused.";}
+ else{caseId=d.id;el("result").hidden=false;el("finding").textContent=d.summary;
+ const answered=d.trace.filter(e=>e.status==="answered");
+ el("model").textContent="Investigation · "+answered.filter(e=>e.stage==="investigation").at(-1).model;
+ el("approve").hidden=d.status!=="awaiting review";
+ el("brief").hidden=!!d.brief;el("communication").hidden=!d.brief;
+ if(d.brief){el("message").textContent=d.brief;el("shared").textContent=d.shared+" Write a short customer update using only these facts.";el("writer").textContent="Drafted by "+answered.filter(e=>e.stage==="briefing").at(-1).model;}
+ showTrace(d.trace);}
+ el("status").textContent=d.status&&d.status!=="awaiting review"?d.status:"";
+ }catch(e){el("status").textContent=e.message;}finally{document.querySelectorAll("button").forEach(b=>b.disabled=false);}
+}
+for(const [id,path] of Object.entries({start:"investigate",approve:"approve",brief:"brief",fault:"fallback",kv:"cache"}))el(id).onclick=()=>run(path);
+</script></html>
