@@ -62,16 +62,29 @@ def call(stage, messages, trace, rehearsal, inject=False):
         finally:
             event["elapsed_ms"] = round((time.monotonic() - start) * 1000)
 
-async def remote_tool(name):
+async def connector_request(key_name, tool=None, outcome_only=False):
+    """Read tool discovery pages or invoke one named tool on the same connector."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
     url = os.environ["MCP_CONNECTOR_URL"]
     if not url.startswith("https://"):
         raise ValueError("Live MCP connector requires HTTPS")
-    async with streamablehttp_client(url, headers={"Authorization": "Bearer " + os.environ["MCP_KEY"]}) as (reader, writer, _):
+    async with streamablehttp_client(url, headers={"Authorization": "Bearer " + os.environ[key_name]}) as (reader, writer, _):
         async with ClientSession(reader, writer) as session:
             await session.initialize()
-            result = await session.call_tool(name, {})
+            if tool is None:
+                names = set()
+                cursor = None
+                for _ in range(25):
+                    page = await session.list_tools(cursor=cursor)
+                    names.update(item.name for item in page.tools)
+                    cursor = page.nextCursor
+                    if not cursor:
+                        return sorted(names)
+                raise RuntimeError("Tool catalog exceeded demo page limit")
+            result = await session.call_tool(tool, {})
+            if outcome_only:
+                return "tool error" if result.isError else "read succeeded"
             if result.isError:
                 raise RuntimeError("MCP tool failed")
             return " ".join(x.text for x in result.content if x.type == "text")[:4000]
@@ -93,10 +106,41 @@ def investigate(trace, fail=False):
         tool = choice.get("tool")
         if tool not in allowed:
             raise ValueError("Planner returned an unsupported or premature action")
-        evidence[tool] = asyncio.run(remote_tool(tool)) if live() else FACTS[tool]
+        evidence[tool] = asyncio.run(connector_request("MCP_KEY", tool)) if live() else FACTS[tool]
         trace.append({"tool":tool, "source":"MCP connector" if live() else "local fixture"})
     raise RuntimeError("Investigation step budget reached")
 
 def brief(trace):
     return call("briefing", [{"role":"user","content":PUBLIC + " Write a short customer update using only these facts."}],
                 trace, "We are investigating checkout difficulties. The service owner is reviewing the incident.")
+
+def compare_access():
+    """Compare observed catalogs. A missing name proves discovery scope only."""
+    if live():
+        if not os.getenv("MCP_COMMS_KEY"):
+            raise ValueError("Set MCP_COMMS_KEY for the live identity comparison")
+        ops = asyncio.run(connector_request("MCP_KEY"))
+        comms = asyncio.run(connector_request("MCP_COMMS_KEY"))
+        source = "Live NAI connector · tools/list"
+    else:
+        ops, comms = sorted(FACTS), ["read_runbook"]
+        source = "Rehearsal · fixture catalogs"
+    expected = set(ops) == set(FACTS) and comms == ["read_runbook"]
+    return {"source":source, "operations":ops, "communications":comms, "expected":expected}
+
+def probe_access():
+    """Positive control and restricted call on the dedicated synthetic read tool."""
+    if not live():
+        return {"source":"Rehearsal · simulated invocation", "ops":"read succeeded",
+                "comms":"tool error", "verdict":"Simulated restricted read failed"}
+    if os.environ.get("MCP_LAB_PROBE") != "1" or not os.getenv("MCP_COMMS_KEY"):
+        return {"source":"Live probe disabled", "ops":"not run", "comms":"not run",
+                "verdict":"Enable MCP_LAB_PROBE=1 with a dedicated synthetic checkout connector"}
+    ops = asyncio.run(connector_request("MCP_KEY", "read_changes", outcome_only=True))
+    if ops != "read succeeded":
+        return {"source":"Live connector", "ops":ops, "comms":"not run",
+                "verdict":"Positive control failed; results are inconclusive"}
+    comms = asyncio.run(connector_request("MCP_COMMS_KEY", "read_changes", outcome_only=True))
+    verdict = ("Unexpected access: restricted key read the change record" if comms == "read succeeded"
+               else "Restricted call returned a tool error. Verify the reason in the connector logs.")
+    return {"source":"Live connector · tools/call read_changes", "ops":ops, "comms":comms, "verdict":verdict}

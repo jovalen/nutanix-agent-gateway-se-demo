@@ -8,10 +8,12 @@
 <p>Customers are reporting failed purchases. What changed, and what should the service owner do next?</p>
 <button class="primary" id="start">Investigate incident</button><p id="status" role="status"></p>
 <article id="result" hidden><h2>Investigation</h2><p id="finding"></p><div class="label" id="model"></div>
+<details><summary>Evidence behind this finding</summary><ul id="facts"></ul></details>
 <button id="approve">Open rollback review</button><button id="brief">Draft customer update</button>
 <div id="communication" hidden><h2>Customer update</h2><p id="message"></p><div class="label" id="writer"></div><details><summary>What the writing model received</summary><blockquote id="shared"></blockquote></details></div></article>
 <details><summary>Presenter tools</summary><p>Replay this incident with a single injected timeout on the first private request.</p>
 <button id="fault">Replay with model failure</button><button id="kv">Compare prefix reuse</button><p id="cache"></p>
+<button id="identities">Compare MCP identities</button><button id="probe">Test restricted read</button><div id="access" aria-live="polite"></div>
 <h2>Execution trace</h2><ol id="trace"></ol></details></main>
 <script>
 const el=id=>document.getElementById(id);
@@ -26,12 +28,21 @@ async function run(path){
  document.querySelectorAll("button").forEach(b=>b.disabled=true);
  el("status").textContent="Working…";
  if(["investigate","fallback"].includes(path)){caseId="";el("result").hidden=true;showTrace([]);}
+ if(["access","probe"].includes(path))el("access").replaceChildren();
  try{
  const response=await fetch("/"+path,{method:"POST",headers:{"X-Presenter":"__TOKEN__","X-Case":caseId}});
  const d=await response.json();
  if(!response.ok){if(d.trace)showTrace(d.trace);throw Error(d.error||"Request failed");}
- if(path==="cache"){el("cache").textContent="Local single-head attention example · Same output: "+d.same_output+". Cold: "+d.cold_projections+" token positions projected. Warm: "+d.warm_projections+" new position; "+d.prefix_tokens+" cached key/value pairs reused.";}
+ if(path==="probe"){el("access").textContent=[d.source,"Operations: "+d.ops,"Communications: "+d.comms,d.verdict].join(" · ");}
+ else if(path==="access"){
+ const box=el("access");box.replaceChildren();
+ for(const line of [d.source,"Operations: "+d.operations.join(", "),"Communications: "+d.communications.join(", "),d.expected?"Catalogs match workshop policy":"Catalogs differ from workshop policy"]){
+ const p=document.createElement("p");p.textContent=line;box.append(p);}
+ }
+ else if(path==="cache"){el("cache").textContent="Local single-head attention example · Same output: "+d.same_output+". Cold: "+d.cold_projections+" token positions projected. Warm: "+d.warm_projections+" new position; "+d.prefix_tokens+" cached key/value pairs reused.";}
  else{caseId=d.id;el("result").hidden=false;el("finding").textContent=d.summary;
+ el("facts").replaceChildren();
+ for(const [tool,fact] of Object.entries(d.evidence)){const li=document.createElement("li");li.textContent=tool+" · "+fact;el("facts").append(li);}
  const answered=d.trace.filter(e=>e.status==="answered");
  el("model").textContent="Investigation · "+answered.filter(e=>e.stage==="investigation").at(-1).model;
  el("approve").hidden=d.status!=="awaiting review";
@@ -41,5 +52,5 @@ async function run(path){
  el("status").textContent=d.status&&d.status!=="awaiting review"?d.status:"";
  }catch(e){el("status").textContent=e.message;}finally{document.querySelectorAll("button").forEach(b=>b.disabled=false);}
 }
-for(const [id,path] of Object.entries({start:"investigate",approve:"approve",brief:"brief",fault:"fallback",kv:"cache"}))el(id).onclick=()=>run(path);
+for(const [id,path] of Object.entries({start:"investigate",approve:"approve",brief:"brief",fault:"fallback",kv:"cache",identities:"access",probe:"probe"}))el(id).onclick=()=>run(path);
 </script></html>

@@ -4,7 +4,7 @@ from engine import FACTS, POLICY, ROUTES
 root = Path(__file__).parent
 out = root / "generated"
 out.mkdir(exist_ok=True)
-parts = [(root / "README.md").read_text(), "## Generated runtime reference", "### Model routes"]
+parts = [(root / "README.md").read_text().replace("](ARQUITECTURA.md)", "](../ARQUITECTURA.md)"), "## Generated runtime reference", "### Model routes"]
 parts.extend("- **" + name + "**: " + " → ".join(routes) for name,routes in ROUTES.items())
 parts.append("### MCP evidence catalog")
 parts.extend("- `" + name + "` — " + fact for name,fact in FACTS.items())

@@ -60,3 +60,11 @@ flowchart TD
 Reviewed main at fb54309, including README_SE.md, the FastAPI handlers, MCP client, gateway client and web portal. The original scenario uses keyword tool selection, a predefined operations sequence, and separate portal, operations and control views. V2 keeps the guided stakeholder narrative, real versus rehearsal distinction and separate model/tool access. A single case replaces portal navigation, persona tabs, duplicate prompt shortcuts and setup controls. Presenter tools hold the optional experiments.
 
 Before a workshop, rehearse the three-click story, verify each private backend and each MCP permission with the lab owner, then test the hosted draft. Capture one next step: a customer workflow, its data boundary, the business owner and a success measure. For the SE role play, ask the observer to record whether the SE discovered each of those four items.
+
+## Architecture workshop
+
+Under **Presenter tools**, select **Compare MCP identities** to list the catalogs returned by the same connector for two keys. Set MCP_COMMS_KEY to a second NAI client key scoped to read_runbook. The investigator uses MCP_KEY. The identity experiment uses an isolated connector with the exact tool names defined in tools_server.py. The writing model itself has no tools. The app compares both catalogs to the workshop policy and displays any mismatch.
+
+For an invocation test, configure MCP_LAB_PROBE=1 only on this synthetic connector and click **Test restricted read**. The server calls read_changes with the investigator key as a positive control and repeats with the restricted key. Only outcomes reach the browser. A tool error requires corroboration in connector logs. A transport or authentication exception stops the test and is inconclusive. An unexpectedly successful read is displayed as unexpected access. Rehearsal labels both tests as simulations.
+
+Spanish presenter notes and competitive research: [Arquitectura y guion](ARQUITECTURA.md).

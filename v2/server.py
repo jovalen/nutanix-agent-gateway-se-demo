@@ -1,12 +1,13 @@
 """Local, single-presenter demo. Run python3 server.py."""
 import json
+import os
 import secrets
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
-from engine import brief, investigate, live, PUBLIC
+
+from engine import brief, investigate, live, PUBLIC, compare_access, probe_access
 from cache import experiment
 
 TOKEN = secrets.token_hex(24)
@@ -35,6 +36,12 @@ class Presenter(BaseHTTPRequestHandler):
             if self.path in ("/investigate", "/fallback"):
                 Presenter.case = None
                 Presenter.case = investigate(trace, self.path == "/fallback")
+            elif self.path == "/probe":
+                return self.send(200, probe_access())
+            elif self.path == "/access":
+                if live() and not os.getenv("MCP_COMMS_KEY"):
+                    return self.send(409, {"error":"Configure MCP_COMMS_KEY for the identity comparison"})
+                return self.send(200, compare_access())
             elif self.path == "/cache":
                 return self.send(200, experiment())
             elif not self.case or self.headers.get("X-Case") != self.case["id"]:

@@ -63,3 +63,23 @@ class PresenterTests(unittest.TestCase):
         self.assertIn("fault", replay["trace"][0])
         self.assertEqual(request("/approve", case["id"])[0], 409)
         self.assertTrue(json.loads(request("/cache")[1])["same_output"])
+
+class CatalogTests(unittest.TestCase):
+    @patch.dict(os.environ, {"DEMO_MODE":"live","MCP_COMMS_KEY":"workshop"})
+    @patch("engine.connector_request")
+    def test_overexposed_key_is_visible(self, fetch):
+        import asyncio
+        from engine import compare_access
+        fetch.side_effect = [sorted(FACTS), sorted(FACTS)]
+        result = compare_access()
+        self.assertFalse(result["expected"])
+        self.assertIn("read_changes", result["communications"])
+        self.assertEqual([c.args for c in fetch.call_args_list], [("MCP_KEY",), ("MCP_COMMS_KEY",)])
+
+    @patch.dict(os.environ, {"DEMO_MODE":"live","MCP_COMMS_KEY":"synthetic","MCP_LAB_PROBE":"1"})
+    @patch("engine.connector_request")
+    def test_actual_read_supersedes_catalog(self, fetch):
+        from engine import probe_access
+        fetch.side_effect = ["read succeeded", "read succeeded"]
+        self.assertIn("Unexpected access", probe_access()["verdict"])
+        self.assertEqual(fetch.await_count, 2)
