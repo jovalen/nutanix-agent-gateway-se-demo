@@ -1,0 +1,19 @@
+name: V2 SE workshop guide
+on:
+  push:
+    paths: ['v2/**', '.github/workflows/v2-docs.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guide:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s v2
+      - run: python3 v2/build_docs.py
+      - run: cat v2/generated/SE-workshop.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SE-workshop
+          path: v2/generated/SE-workshop.md
